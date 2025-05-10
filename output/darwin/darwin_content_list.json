@@ -1,0 +1,202 @@
+[
+    {
+        "type": "text",
+        "text": "HYBRID SPECIATION",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Rapid hybrid speciation in Darwin’s finches ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Sangeet Lamichhaney,1\\* Fan Han,1 Matthew T. Webster,1 Leif Andersson,1,2,3† B. Rosemary Grant,4 Peter R. Grant4 ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Homoploid hybrid speciation in animals has been inferred frequently from patterns of variation, but few examples have withstood critical scrutiny. Here we report a directly documented example, from its origin to reproductive isolation. An immigrant Darwin’s finch to Daphne Major in the Galápagos archipelago initiated a new genetic lineage by breeding with a resident finch (Geospiza fortis). Genome sequencing of the immigrant identified it as a G. conirostris male that originated on Española ${ \\tt > } 1 0 0$ kilometers from Daphne Major. From the second generation onward, the lineage bred endogamously and, despite intense inbreeding, was ecologically successful and showed transgressive segregation of bill morphology. This example shows that reproductive isolation, which typically develops over hundreds of generations, can be established in only three. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "nterbreeding of two species may result in the formation of a new species, reproductively isolated from the parental species $( I )$ . Hybrid speciation without chromosomal doubling, that is, homoploid hybrid speciation, is rare (1–4). Possible examples have been reported in plants $\\textcircled{4}$ , butterflies $( { \\boldsymbol { 5 } } ) ,$ flies $( \\delta ) ,$ fish $( 7 ) ,$ mammals (8), and birds (9). However, only one of these, involving Heliconius butterflies (5), and three additional examples, involving Helianthus sunflowers (3, 10), meet stringent criteria that have been proposed for recognizing that hybridization was the cause of speciation (2). Here we report the results of a combined ecological and genomic study of Darwin’s finches that documents hybrid speciation in the wild from its inception to the development of reproductive isolation. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "An immature male finch immigrated to the small Galápagos Island of Daphne Major $( 0 . 3 4 \\mathrm { k m ^ { 2 } } )$ in 1981 (11–13). It resembled the medium ground finch Geospiza fortis, but was $70 \\%$ larger and sang a distinctive song. Assignment tests with microsatellite markers from finches on neighboring islands indicated that it was possibly a G. fortis $\\times$ G. scandens hybrid originating on the adjacent large island of Santa Cruz, $8 \\mathrm { k m }$ from Daphne $( I I )$ . We followed the survival and breeding of this individual and its descendants for six generations over the next 31 years. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "The immigrant (generation 0) bred with a G. fortis female and one of its $\\mathrm { F _ { 1 } }$ offspring bred with another G. fortis female, but all other matings occurred within this lineage, endogamously; therefore, from generation 2 onward, the lineage behaved as an independent species relative to other birds on the island (Fig. 1). Generations 4 to 6 were derived from a single brother-sister mating in generation 3. Despite close inbreeding, members of the lineage experienced high fitness, as judged by their reproductive output and high survival (12). At maximum (in 2010), eight breeding pairs and 36 individuals were present on the island, and on our most recent visit (in 2012), there were eight breeding pairs and 23 individuals of generations 3 to 6. From observations and experiments with ground finches (12, 13), bill morphology is likely to be a key factor in the success of these birds. The ability of finches to efficiently exploit the large woody fruits of Tribulus cistoides in dry seasons, and particularly during droughts and limited food supply, is a function of bill size, especially bill depth (12). Also, finch species imprint on features of their parents early in life, and later, when choosing a mate, they discriminate between members of their own and other species on the basis of bill size and shape, as well as body size and song (13). ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "We combined morphological measurements and whole genome sequencing of almost all individuals in the new lineage to establish the genetic basis of the founder population and characteristics associated with its success. We (i) assigned the founder male to species and source population, (ii) confirmed pedigree assignments from observations and sequence data (14), (iii) quantified patterns of gene transmission between generations, (iv) assessed genetic diversity, and (v) searched for genetic clues to the success of the lineage. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Because members of the new lineage are conspicuously large, we refer to it as the Big Bird lineage (12). ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "A phylogenetic tree analysis showed that the founder male (individual 5110) was not a G. fortis $\\times$ G. scandens hybrid as previously hypothesized (12), but rather a G. conirostris (Fig. 2A). This species (large cactus finch) occurs on Española and its satellite Gardner (Fig. 2B) and nowhere else in the Galápagos archipelago; a population on Genovesa, formerly classified as G. conirostris, was recently reclassified as G. propinqua (15). Immigration from Española is noteworthy and unexpected because it is located more than $1 0 0 \\mathrm { k m }$ from Daphne Major and a large island (Santa Cruz) lies between them (Fig. 2B). Rare long-distance movements of finches in the archipelago have been detected before, but, until recently, it was assumed these birds were vagrants that did not stay to breed (16–18). ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "The founder had an inbreeding coefficient $( F )$ of 0.19 and appeared to be a typical member of the source population of G. conirostris from Española $( F = - 0 . 0 4$ to 0.31), in terms of average genome-wide homozygosity, and admixture (19) analysis classified it as a normal G. conirostris (Fig. 2C). The inbreeding coefficient was negative in the $\\operatorname { F } _ { 1 }$ generation (Fig. 2D) as a result of the interspecies hybridization (12, 13). A gradual increase in homozygosity was then observed over the next five generations (Fig. 2D), as expected from the small number of breeding pairs (one to eight), causing genetic drift. Genome-wide average nucleotide diversity $\\pi$ showed a similar ",
+        "page_idx": 0
+    },
+    {
+        "type": "image",
+        "img_path": "images/d7df5ad620ff7ff5eada0bb492b5ace6ba85c4917241fa038d7ac2e2a2fa1a48.jpg",
+        "img_caption": [
+            "Fig. 1. The Big Bird lineage through the sixth generation. Interbreeding with two G. fortis females resulted in a reduction of the genetic contribution of the immigrant male from 0.50 in the first generation to 0.375 in the second and subsequent generations. The numbers indicate identification number (14). $\\boldsymbol { n }$ indicates number of individuals. [Photo credit: Peter and Rosemary Grant] "
+        ],
+        "img_footnote": [],
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Fig. 2. Phylogeny, geography, and increase in homozygosity. (A) Maximum likelihood tree of Darwin’s finches constructed from whole genomes [this study and (13, 21)]. The founder male of the Big Bird lineage is highlighted in blue. All nodes that have full local support on the basis of the ShimodairaHasegawa test are marked with asterisks. (B) Map of the Galápagos archipelago. The original colonist individual on Daphne Major originated on Española Island (or its satellite Gardner) in the southeast of the archipelago ${ > } 1 0 0 ~ \\mathsf { k m }$ from Daphne. The hypothetical flight path, indicated by the red dashed arrow, is informed by observations (B.R.G. and P.R.G., 1973–1975) of postbreeding movement of finches on Santa Cruz Island, northward on the east coast and westward on the north coast. (C) Maximum likelihood estimation of individual admixture proportions using genome-wide singlenucleotide polymorphism (SNP) data for a range of preassumed populations (ancestral groups $K = 2$ to 6). The number of colors used corresponds to the number of $\\boldsymbol { K }$ being used in each plot. (D) Increase in homozygosity (genome-wide inbreeding coefficient, $F _ { . }$ ) in the Big Bird lineage over the generations. The estimate for the original colonist is shown by an asterisk. ",
+        "page_idx": 1
+    },
+    {
+        "type": "image",
+        "img_path": "images/68c07b0f9a7992acd49d5ce1bac09af921781cb69898df61fc191c2120da4d6b.jpg",
+        "img_caption": [],
+        "img_footnote": [],
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "pattern, with a decline from $0 . 1 7 \\%$ in generation 1 to ${ \\sim } 0 . 1 3 \\%$ in generations 4 to 6; values for G. fortis and G. conirostris were 0.15 and $0 . 1 6 \\%$ , respectively (fig. S1). Furthermore, the extensive linkage disequilibrium across the genome is consistent with a recent hybridization event (fig. S2). The Big Bird lineage also exhibited low quantitative variation. The population, all generations combined, varied less in bill length as measured by the coefficient of variation $( 3 . 8 2 \\pm 0 . 4 2 \\$ , mean $\\pm \\operatorname { S E M }$ , $n = 4 2$ ) than G. fortis $\\langle 7 . 5 5 \\pm 0 . 6 9$ , $n = 6 0$ , $P < 0 . 0 0 5 \\dot { \\mathrm { \\Omega } }$ and $G .$ conirostris $\\left( 6 . 3 5 \\pm 0 . 5 6 \\right.$ , $n = 6 4 , P < 0 . 0 1$ ), and varied less in bill depth than $G$ . conirostris $\\cdot 5 . 0 2 \\pm 0 . 5 5$ versus $7 . 7 1 \\pm$ 0.68, $\\textstyle P < 0 . 0 5 ,$ ). The low values probably represent low additive genetic variation because the traits are highly heritable in Geospiza species (13, 20). ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "The ecological success and reproductive isolation of the Big Bird lineage were most likely due to large bill and body size and a distinctive song $( I 2 )$ . We undertook a more detailed morphological analysis of the new lineage, together with both of the parental species $G$ . conirostris and G. fortis $[ ( I 4 ) _ { }$ , table S1]. In body size, the members of the Big Bird lineage are intermediate, on average, between the means of the parental species large bill size was $6 0 . 8 \\%$ in generations 4 to 6 (fig. S4 and table S5). From generation 3 onward, all Big Birds were homozygous for ALX1 $B$ alleles associated with blunt bills. A closer examination revealed that two variants of the $B$ allele, designated $B I$ and $B 2$ , were segregating among the Big Birds (fig. S5 and table S5); the two alleles differ by nine nucleotide substitutions within the 240-kb region, showing a strong association with bill shape $( I 4 )$ . The $B I$ allele originated from the founder male that was genotyped as $P / B I$ , where $P$ refers to pointed, whereas the $B 2$ allele originated from G. fortis (table S5). Interestingly, $B 2 / B 2$ homozygotes had significantly shorter bills than the other two genotypes [analysis of covariance (ANCOVA) $F _ { 2 , 3 2 } = 1 0 . 5$ , $P = 0 . 0 0 0 3$ ; Tukey’s post hoc tests, $B 2 / B 2 \\ < \\ B I / B I$ $( P _ { \\mathrm { \\Phi } } =$ 0.005) and $B 2 / B 2 \\ < \\ B I / B 2$ $( P = 0 . 0 0 0 2 )$ ]. Although these associations should be confirmed with larger sample sizes, they are consistent with the hypothesis that the ALX1 locus in Darwin’s finches involves an allelic series with different effects on bill morphology (15). ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 2
+    },
+    {
+        "type": "image",
+        "img_path": "images/8f8884210c0b46b7db1b53e6603fd97f88ba11e094d0f32a5182e9e228559e87.jpg",
+        "img_caption": [
+            "Fig. 3. Morphology. (A) Bill-size variation in relation to body size among the Big Bird lineage (blue) and the two parental species G. fortis (green) and G. conirostris (red). All 42 Big Birds lie above a line connecting the two parents, indicated by black squares, and above a line connecting the means of the two populations. The ordinary least squares regression slopes of the three relationships (table S3) are homogeneous (ANCOVA, $F _ { 2 , 1 6 1 } = 1 . 4$ , $P = 0 . 2 6 ^ { \\prime }$ ), whereas the intercepts differ (ANCOVA with species–bill size interaction removed, $F _ { 2 , 1 6 3 } = 1 4 0 . 9$ , $P = 0 . 0 0 0 1 _ { \\cdot } ^ { \\cdot }$ . The $9 9 \\%$ confidence limits on the Big Bird intercept estimate do not overlap those of the other two intercepts, whereas the $9 5 \\%$ confidence limits of the G. conirostris and $G$ . fortis slopes do overlap. This pattern is repeated in two of the components of bill size: depth and width [fig. S3; for bill width, see (14)]. PC, principal component. (B) Mean bill depth increased over generations $\\cdot { \\cal F } _ { 1 , 4 2 } = 1 2 . 9$ , $P = 0 . 0 0 0 8$ , adj $r ^ { 2 } = 0 . 2 2$ , $\\mathsf { s l o p e } = 0 . 2 5 \\pm 0 . 0 7 ;$ ). The relationship holds for generations 1 to 6 alone, i.e., without the founder and its mate $\\stackrel { \\prime } { F _ { 1 , 4 0 } } = 9 . 1$ , $P = 0 . 0 0 4$ , adj $r ^ { 2 } = 0 . 1 6$ , $\\mathsf { s l o p e } = 0 . 2 4 \\pm 0 . 0 8 ;$ . Note the bill depth of the single member of generation 1 is $1 0 . 9 \\mathrm { m m }$ , which is close to the midpoint of the parental measurements $( 1 1 . 0 \\mathsf { m m } ^ { \\cdot }$ ). Transgressive segregation for bill depth in the $\\mathsf { B i g }$ Bird lineage is possibly indicated by the fraction of individuals that exceeded parental phenotypic values (highlighted in blue) $( \\boldsymbol { { \\mathit { 1 0 } } } )$ , which was estimated at 0.5, 0.3, 0.4, and 0.3 in generations 3 to 6, respectively. (C) Mean body size remained unchanged across generations $F _ { 1 , 4 2 } = 0 . 7 6$ , $P = 0 . 3 9$ , adj $r ^ { 2 } = 0 . 0 0$ , $\\mathsf { s l o p e } = 0 . 0 6 \\pm$ 0.07). (D) Members of the $\\mathsf { B i g }$ Bird lineage (blue) are in unoccupied morphological space among the coexisting ecological competitor species. Ellipses contain $9 5 \\%$ of individuals. G. magnirostris, yellow; G. fortis, green; G. scandens, aqua. "
+        ],
+        "img_footnote": [],
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "(Fig. 3A), but closer to the G. fortis mean (table S2), as expected from their predominantly G. fortis genetic composition and polygenic inheritance. However, by contrast, they are more similar to G. conirostris in bill size (Fig. 3A, fig. S3, and tables S1 and S2), despite the minority representation of G. conirostris genes in generation 3 and onward. This represents a substantial allometric shift in the Big Bird lineage, possibly caused by natural selection. Selection is plausible because shifts in the elevations of static allometries have been produced relatively easily in a few generations of artificial selection in laboratory populations of animals (21). The pattern of change also has the characteristics of transgressive segregation (10, 22). This is the production of progeny with extreme phenotypes beyond the range of those of the parents that are likely caused by epistasis, which has been detected in other hybridizing finch species on Daphne (23), and/or by combining complementary alleles at different loci from different populations in $\\mathrm { F _ { 2 } }$ and further generations (22, 24, 25). ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "ALX1 and HMGA2 have large effects on bill dimensions, which are polygenic traits that are affected by other gene variants, and these may have changed in frequency as a result of a combination of natural selection and random drift. A trend of increasing bill size across generations $[ F _ { 1 , 4 2 } = 6 . 0$ , $P = 0 . 0 1 8$ , adjusted goodness of fit $( \\mathrm { a d j } r ^ { 2 } ) = 0 . 1 0 ]$ is more indicative of selection than of drift. In 2009, the only year with sufficient samples for an analysis of mortality, 19 adult survivors to the following year had a larger mean bill size than five adults that died $( F _ { 1 , 2 2 } = 8 . 3 0$ , $P = 0 . 0 0 9 _ { \\cdot }$ ). The most important component of bill size is bill depth, and an increase in this dimension (Fig. 3B) was noteworthy for two reasons. First, the increase was independent of body size (Fig. 3C). The genetic correlation between bill size and body size that potentially constrains independent evolution of bill size is not known. However, in G. fortis, the genetic correlation between bill depth and body mass is strongly positive $\\cdot 0 . 6 7 \\pm 0 . 1 0$ SEM) (23). Second, bill length did not change in the population (fig. S6); hence, bills became not only larger but also progressively blunter, on average, across generations (fig. S6). A possible scenario is that transgressive segregation produced genotype combinations that have been favored by natural selection, causing the shift in beak morphology. The net result was morphologically based ecological segregation from the three sympatric competitor species, G. fortis, G. scandens, and G. magnirostris (Fig. 3D). ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "To investigate the genetic basis for the relatively large bills of the Big Birds, we examined the genotypes at HMGA2 and ALX1, two closely linked loci (7 Mb apart) previously shown to be associated with variation in bill morphology in Darwin’s finches (15, 26). At the HMGA2 locus, the allele frequency of the $L$ allele associated with ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "The final stage in speciation is the development of reproductive isolation from the parent population. In Darwin’s finches, a premating barrier to interbreeding is established by a difference in song and morphology (12, 13). The test of reproductive isolation requires sympatry with the parental population(s) or a surrogate experiment, for example, with finch models and/or playback of a tape-recorded song (27). The new population on Daphne is reproductively isolated from one of the parental populations, G. fortis, but whether it is reproductively isolated from the other, $G .$ conirostris on Española, is unknown because experiments have not been done there. Nevertheless, it is likely that the founder population has already become reproductively isolated from G. conirostris, as bill size has changed in relation to body size (Fig. 3A). Together, these traits are used as cues in the choice of mates, arising from cultural, nongenetic imprinting (12, 13). Of particular relevance, experiments on Daphne Major with G. scandens showed that altering bill size in relation to body size of finch models significantly reduced responses from males (28). Additionally, males of the founder population sing a different song from G. conirostris on Española and Gardner, probably as a result of imperfect copying of a Daphne Major finch by the founder after it had first learned its father’s song on Española (or Gardner) (13). Song and morphology are cues that are used in mate choice and typically result in the avoidance of interspecific mating. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "“…to understand the mechanism of speciation, the focus should be on cases of incipient speciation rather than on completed ones” (29). We have taken advantage of witnessing a rare colonization event to directly document the fate of a population founded by a single immigrant and his $G .$ fortis mate. The newly founded population of Darwin’s finches is an incipient hybrid species, reproductively isolated and ecologically segregated from coexisting finch species (Fig. 3D). The key features of success of the new lineage are reproductive isolation based on learned song and morphology, transgressive segregation producing new phenotypes, and the availability of underexploited food resources. Homoploid hybrid speciation is believed to be a generally slow process extending over hundreds of generations (29), but, as the present example shows, it can be established in only three generations. Thus, in small islands or island-like settings, it may be easier to achieve than is currently believed (1, 30–32). ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "Homoploid hybrid speciation of the Big Bird lineage exemplifies the potential evolutionary importance of rare and chance events. Expansion of the population from two individuals to three dozen was conditioned on the founder being a male with a distinctive song $( I 4 )$ and facilitated by the chance occurrence of strong selection against large bill size in a competitor species, $G .$ fortis, in 2004 to 2005 (12, 26). The selection event, in turn, was mediated by G. magnirostris, a species that established a breeding population in 1983. Joint occurrence of rare and extreme events such as these may be especially potent in ecology and evolution (33, 34). ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "REFERENCES AND NOTES ",
+        "text_level": 1,
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "1. R. J. Abbott, N. H. Barton, J. M. Good, Mol. Ecol. 25, 2325–2332 (2016).   \n2. M. Schumer, G. G. Rosenthal, P. Andolfatto, Evolution 68, 1553–1560 (2014).   \n3. B. L. Gross, L. H. Rieseberg, J. Hered. 96, 241–252 (2005).   \n4. S. B. Yakimowski, L. H. Rieseberg, Am. J. Bot. 101, 1247–1258 (2014).   \n5. J. Mavárez et al., Nature 441, 868–871 (2006).   \n6. D. Schwarz, B. M. Matta, N. L. Shakir-Botteri, B. A. McPheron, Nature 436, 546–549 (2005).   \n7. J. H. Kang, M. Schartl, R. B. Walter, A. Meyer, BMC Evol. Biol. 13, 25 (2013).   \n8. P. A. Larsen, M. R. Marchán-Rivadeneira, R. J. Baker, Proc. Natl. Acad. Sci. U.S.A. 107, 11447–11452 (2010).   \n9. J. S. Hermansen et al., Mol. Ecol. 20, 3812–3822 (2011).   \n10. L. H. Rieseberg, C. Van Fossen, A. M. Desrochers, Nature 375, 313–316 (1995).   \n11. P. R. Grant, B. R. Grant, Proc. Natl. Acad. Sci. U.S.A. 106, 20141–20148 (2009).   \n12. B. R. Grant, P. R. Grant, 40 Years of Evolution: Darwin’s Finches on Daphne Major Island (Princeton Univ. Press, 2014).   \n13. P. R. Grant, B. R. Grant, How and Why Species Multiply (Princeton Univ. Press, 2008).   \n14. See supplementary materials.   \n15. S. Lamichhaney et al., Nature 518, 371–375 (2015).   \n16. P. R. Grant, B. R. Grant, Philos. Trans. R. Soc. London B Biol. Sci. 365, 1065–1076 (2010).   \n17. D. L. Lack, Darwin’s Finches (Cambridge Univ. Press, 1947).   \n18. H. S. Swarth, Occas. Pap. Calif. Acad. Sci 18, 1–299 (1931).   \n19. D. H. Alexander, J. Novembre, K. Lange, Genome Res. 19, 1655–1664 (2009).   \n20. L. F. Keller, P. R. Grant, B. R. Grant, K. Petren, Heredity 87, 325–336 (2001).   \n21. G. H. Bolstad et al., Proc. Natl. Acad. Sci. U.S.A. 112, 13284–13289 (2015).   \n22. L. H. Rieseberg, M. A. Archer, R. K. Wayne, Heredity 83, 363–372 (1999).   \n23. P. R. Grant, B. R. Grant, Evolution 48, 297–316 (1994).   \n24. K. J. Parsons, Y. H. Son, R. Craig Albertson, Evol. Biol. 38, 306–315 (2011).   \n25. R. Stelkens, O. Seehausen, Evolution 63, 884–897 (2009).   \n26. S. Lamichhaney et al., Science 352, 470–474 (2016).   \n27. B. R. Grant, P. R. Grant, Biol. J. Linn. Soc. Lond. 76, 545–556 (2002).   \n28. L. M. Ratcliffe, P. R. Grant, Anim. Behav. 31, 1139–1153 (1983).   \n29. A. W. Nolte, D. Tautz, Trends Genet. 26, 54–58 (2010).   \n30. J. Mavárez, M. Linares, Mol. Ecol. 17, 4181–4185 (2008).   \n31. Marie Curie SPECIATION Network, Trends Ecol. Evol. 27, 27–39 (2012).   \n32. R. J. Abbott, M. J. Hegarty, S. J. Hiscock, A. C. Brennan, Taxon 59, 1375–1386 (2010).   \n33. R. Paine, M. Tegner, E. Johnson, Ecosystems (N. Y.) 1, 535–545 (1998).   \n34. P. R. Grant et al., Philos. Trans. R. Soc. London B Biol. Sci. 372, 20160146 (2017). ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "ACKNOWLEDGMENTS ",
+        "text_level": 1,
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "The NSF funded the collection of material under permits from the Galápagos and Costa Rica National Parks Services and the Charles Darwin Research Station, in accordance with protocols of Princeton University’s Animal Welfare Committee. The project was supported by the Knut and Alice Wallenberg Foundation and the Swedish Research Council. Sequencing was performed by the SNP&SEQ Technology Platform, supported by Uppsala University and Hospital, SciLifeLab, and the Swedish Research Council. Computer resources were supplied by Uppsala Multidisciplinary Center for Advanced Computational Science (UPPMAX). We would also like to thank two anonymous reviewers for valuable comments on the paper. The Illumina reads have been submitted to the short reads archive (www.ncbi.nlm.nih.gov/sra) with the accession number PRJNA392917. Raw tree files for constructing Fig. 2A and figs. S4, S5, and S7 have been submitted to the TreeBASE database with submission ID S21803 (http://purl.org/ phylo/treebase/phylows/study/TB2:S21803?format=html). P.R.G. and B.R.G. collected the material. P.R.G., B.R.G., and L.A. conceived the study. L.A. and M.T.W. led the bioinformatic analysis of data. S.L. and F.H. performed the bioinformatic analysis. P.R.G., B.R.G., S.L., and L.A. wrote the paper with input from the other authors. All authors approved the manuscript before submission. ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "SUPPLEMENTARY MATERIALS ",
+        "text_level": 1,
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "www.sciencemag.org/content/359/6372/224/suppl/DC1   \nMaterials and Methods   \nSupplementary Text   \nFigs. S1 to S7   \nTables S1 to S5   \nReferences (35–40)   \n23 July 2017; accepted 9 November 2017   \nPublished online 23 November 2017   \n10.1126/science.aao4593 ",
+        "page_idx": 3
+    }
+]
