@@ -2,6 +2,10 @@ import asyncio
 import os
 import argparse
 import sys
+import json
+import datetime
+import shutil # 用于复制目录
+from pathlib import Path
 
 # 添加项目根目录到Python路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -10,299 +14,453 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 import csv # 导入 csv 模块
-import json # 导入 json 模块，用于处理参考文献列表
 # 现在导入项目模块
 from slais.pdf_utils import convert_pdf_to_markdown
 from slais.pubmed_client import PubMedClient, ArticleDetails # 从新的 pubmed_client 模块导入
 from slais.semantic_scholar_client import SemanticScholarClient # 从新的 semantic_scholar_client 模块导入
 from slais import config
-from slais.utils.logging_utils import setup_logging # 导入日志设置函数
+from slais.utils.logging_utils import logger, setup_logging # 导入logger和setup_logging
+from slais.agents import PDFParsingAgent, MetadataFetchingAgent, MethodologyAnalysisAgent, InnovationExtractionAgent, QAGenerationAgent
+
 
 # 导入配置
 try:
-    from slais.config import DEFAULT_PDF_PATH, OUTPUT_BASE_DIR, ARTICLE_DOI, NCBI_EMAIL # 导入 NCBI_EMAIL
+    from slais.config import DEFAULT_PDF_PATH, OUTPUT_BASE_DIR, ARTICLE_DOI, NCBI_EMAIL  # 导入 NCBI_EMAIL
 except ImportError:
     # 如果config.py不存在，使用默认值
     DEFAULT_PDF_PATH = "pdfs/example.pdf"
     OUTPUT_BASE_DIR = "output"
     ARTICLE_DOI = None
-    NCBI_EMAIL = None # 默认邮箱为 None
+    NCBI_EMAIL = None  # 默认邮箱为 None
     print("警告: 无法导入配置文件，使用默认配置")
 
 async def main(pdf_path=None):
     # 使用默认PDF路径或命令行参数提供的路径
     if pdf_path is None:
-        pdf_path = DEFAULT_PDF_PATH
-    
-    print(f"正在处理PDF文件: {pdf_path}")
-    
-    # Step 1: 从配置中获取DOI和邮箱
-    doi = ARTICLE_DOI
-    email = NCBI_EMAIL # 从配置中获取邮箱
+        pdf_path = config.DEFAULT_PDF_PATH  # 直接使用config中已处理的值
+
+    # 处理PDF路径
+    clean_pdf_path = pdf_path  # config中的值已经被清理，不需要再次处理
+    logger.info(f"正在处理PDF文件: {clean_pdf_path}")
+
+    # Step 1: 直接使用config中已清理的值
+    doi = config.ARTICLE_DOI  # 已在config.py中清理
+    email = config.NCBI_EMAIL  # 已在config.py中清理
 
     if doi is None:
-        print("未在配置中找到DOI (ARTICLE_DOI 环境变量未设置)。")
-        pdf_filename_no_ext = os.path.splitext(os.path.basename(pdf_path))[0]
-        print(f"将使用PDF文件名 '{pdf_filename_no_ext}' 作为部分输出标识符，但PubMed查询将失败。")
-    
+        logger.warning("未在配置中找到DOI (ARTICLE_DOI 环境变量未设置)。")
+        pdf_filename_no_ext = os.path.splitext(os.path.basename(clean_pdf_path))[0]
+        logger.info(f"将使用PDF文件名 '{pdf_filename_no_ext}' 作为部分输出标识符，但PubMed查询将失败。")
+
     if not email:
-        print("警告: 未在配置中找到 NCBI 邮箱 (NCBI_EMAIL 环境变量未设置)。PubMed 查询可能受限或失败。")
+        logger.warning("警告: 未在配置中找到 NCBI 邮箱 (NCBI_EMAIL 环境变量未设置)。PubMed 查询可能受限或失败。")
 
-    # --- 初始化数据存储 ---
-    original_s2_info: Optional[Dict[str, Any]] = None # S2对原始文章的信息
-    original_pubmed_info: Optional[ArticleDetails] = None # PubMed对原始文章的信息 (可能通过S2的PMID获取)
+    # --- 初始化智能体 ---
+    pdf_parsing_agent = PDFParsingAgent()
+    metadata_fetching_agent = MetadataFetchingAgent()
+    from langchain_community.chat_models import ChatOpenAI # 导入 ChatOpenAI
     
-    pubmed_related_articles: List[ArticleDetails] = [] # PubMed计算的相关文献
-    
-    s2_reference_dois: List[str] = [] # S2返回的参考文献DOI列表
-    s2_references_s2_details: Dict[str, Optional[Dict[str, Any]]] = {} # S2对参考文献的详细信息 {doi: s2_info}
-    s2_references_pubmed_details: List[ArticleDetails] = [] # PubMed对S2参考文献的补充信息
-
-    # --- API客户端实例化 ---
-    pubmed_client = PubMedClient()
-    s2_client = SemanticScholarClient()
-
-    if doi and email:
-        print(f"从配置中获取的DOI: {doi}")
-        print(f"从配置中获取的邮箱: {email}")
-
-        # --- Step 2: 获取原始文章信息 ---
-        # 2a. 从 Semantic Scholar 获取
-        print(f"\n正在从 Semantic Scholar 获取原始文章 (DOI: {doi}) 的信息...")
-        original_s2_info = await s2_client.get_paper_details_by_doi(doi)
+    # 针对DashScope API进行特殊处理
+    if "dashscope" in config.OPENAI_API_BASE_URL.lower():
+        # 直接从环境变量再次读取模型名以确保最新值
+        model_name = os.environ.get("OPENAI_API_MODEL", config.OPENAI_API_MODEL)
+        model_name = model_name.split('#')[0].strip().strip('"').strip("'")
         
-        if original_s2_info and original_s2_info.get('paperId'):
-            print(f"  成功从S2获取原始文章信息 (S2 PaperID: {original_s2_info['paperId']})")
-            s2_paper_id_original = original_s2_info['paperId']
+        logger.info(f"使用DashScope兼容模式和模型: {model_name}")
+        
+        # DashScope兼容模式下特殊处理
+        headers = {"Authorization": f"Bearer {config.OPENAI_API_KEY}"}
+        
+        # DashScope兼容模式配置
+        llm = ChatOpenAI(
+            api_key=config.OPENAI_API_KEY,
+            model_name=model_name,  # 使用直接从环境变量读取的值
+            base_url=config.OPENAI_API_BASE_URL,
+            temperature=config.OPENAI_TEMPERATURE,
+            streaming=False,
+            default_headers=headers,
+            verbose=True,
+        )
+    else:
+        # 标准OpenAI API
+        logger.info(f"使用标准OpenAI API和模型: {config.OPENAI_API_MODEL}")
+        
+        llm = ChatOpenAI(
+            openai_api_key=config.OPENAI_API_KEY,
+            model_name=config.OPENAI_API_MODEL,
+            openai_api_base=config.OPENAI_API_BASE_URL,
+            temperature=config.OPENAI_TEMPERATURE
+        )
+    
+    methodology_analysis_agent = MethodologyAnalysisAgent(llm=llm)
+    innovation_extraction_agent = InnovationExtractionAgent(llm=llm)
+    qa_generation_agent = QAGenerationAgent(llm=llm)
+
+    # --- Step 2: PDF解析 ---
+    md_content = await pdf_parsing_agent.extract_content(clean_pdf_path)
+    
+    # --- 新增: 保存PDF转换后的Markdown内容到输出目录 ---
+    # 获取PDF文件名（不含扩展名）
+    pdf_filename_no_ext = os.path.splitext(os.path.basename(clean_pdf_path))[0]
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # 创建输出目录
+    output_dir = os.path.join(config.OUTPUT_BASE_DIR, pdf_filename_no_ext)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    # 保存Markdown内容
+    md_file_path = os.path.join(output_dir, f"{pdf_filename_no_ext}_markdown_{timestamp}.md")
+    with open(md_file_path, 'w', encoding='utf-8') as f:
+        f.write(md_content)
+    logger.info(f"已将PDF转换为Markdown并保存到: {md_file_path}")
+
+    # --- Step 3: 获取元数据 ---
+    metadata = await metadata_fetching_agent.fetch_metadata(doi, email)
+    original_s2_info = metadata["s2_info"]
+    original_pubmed_info = metadata["pubmed_info"]
+    
+    # --- 新增: Step 3.5: 获取相关文献信息 ---
+    related_articles = []
+    reference_articles = []
+    
+    # 获取PubMed相关文献
+    if original_pubmed_info and original_pubmed_info.get('pmid'):
+        pmid = original_pubmed_info.get('pmid')
+        logger.info(f"开始获取PMID {pmid}的相关文献...")
+        try:
+            related_articles = await metadata_fetching_agent.pubmed_client.get_related_articles(pmid, email)
+            logger.info(f"成功获取到 {len(related_articles)} 篇相关文献")
+        except Exception as e:
+            logger.error(f"获取相关文献时出错: {e}")
+    else:
+        logger.warning("未获取到原文PMID，无法获取PubMed相关文献")
+    
+    # 获取Semantic Scholar参考文献
+    if original_s2_info and original_s2_info.get('paperId'):
+        paper_id = original_s2_info.get('paperId')
+        logger.info(f"开始获取Semantic Scholar论文ID {paper_id}的参考文献...")
+        try:
+            # 使用新的批量获取方法
+            reference_articles = await metadata_fetching_agent.s2_client.batch_get_references_by_papers(paper_id, limit=100)
             
-            # 2b. (可选) 从 PubMed 补充/核实原始文章信息 (如果S2提供了PMID)
-            s2_external_ids = original_s2_info.get('externalIds', {})
-            pmid_from_s2 = s2_external_ids.get('PubMed') if isinstance(s2_external_ids, dict) else None
+            logger.info(f"成功获取 {len(reference_articles)} 篇参考文献")
             
-            if pmid_from_s2:
-                print(f"  S2提供了PMID: {pmid_from_s2}。正在从PubMed获取/核实...")
-                original_pubmed_info = await pubmed_client.get_article_details_by_pmid(pmid_from_s2, email)
-                if original_pubmed_info:
-                    print(f"    成功从PubMed获取PMID {pmid_from_s2} 的信息。")
-                else:
-                    print(f"    未能从PubMed获取PMID {pmid_from_s2} 的信息，将主要依赖S2数据。")
-            else: # S2未提供PMID，尝试用DOI从PubMed获取
-                print(f"  S2未提供PMID。尝试用DOI从PubMed获取原始文章信息...")
-                original_pubmed_info = await pubmed_client.get_article_details(doi, email)
-                if original_pubmed_info:
-                     print(f"    成功从PubMed获取DOI {doi} 的信息 (PMID: {original_pubmed_info.get('pmid')})。")
-                else:
-                    print(f"    也未能从PubMed通过DOI获取原始文章信息。")
-        else:
-            print(f"  未能从S2获取原始文章信息。尝试直接从PubMed获取...")
-            original_pubmed_info = await pubmed_client.get_article_details(doi, email)
-            if original_pubmed_info:
-                 print(f"    成功从PubMed获取DOI {doi} 的信息 (PMID: {original_pubmed_info.get('pmid')})。")
-            else:
-                print(f"    也未能从PubMed通过DOI获取原始文章信息。处理可能无法继续。")
-
-        # --- Step 3: 输出原始文章信息 (综合S2和PubMed) ---
-        # (这部分可以更精细地合并数据，暂时简化)
-        print("\n==== 原始文章详情 (综合S2/PubMed) ====")
-        temp_title = (original_s2_info.get('title') if original_s2_info 
-                      else (original_pubmed_info.get('title') if original_pubmed_info else "未提供标题"))
-        print(f"标题: {temp_title}")
-        # ... 可以添加更多字段的打印 ...
-        if original_s2_info: print(f"S2 PaperID: {original_s2_info.get('paperId')}")
-        if original_pubmed_info: print(f"PubMed PMID: {original_pubmed_info.get('pmid')}")
-        print("==================================\n")
-
-        # --- Step 4: 获取PubMed计算的相关文献 ---
-        # 需要原始文章的PMID，优先从 original_pubmed_info 获取，其次从 original_s2_info 的 externalIds
-        pmid_for_related = None
-        if original_pubmed_info and original_pubmed_info.get('pmid'):
-            pmid_for_related = original_pubmed_info['pmid']
-        elif original_s2_info and isinstance(original_s2_info.get('externalIds'), dict):
-            pmid_for_related = original_s2_info['externalIds'].get('PubMed')
-
-        if pmid_for_related:
-            print(f"正在使用PMID {pmid_for_related} 从PubMed获取相关文章...")
-            pubmed_related_articles = await pubmed_client.get_related_articles(pmid_for_related, email)
-            print(f"通过PubMed找到 {len(pubmed_related_articles)} 篇相关文章。")
-            # (输出PubMed相关文章列表的逻辑可以保留或调整)
-        else:
-            print("无PMID用于查询PubMed相关文章。")
-        print("==================================\n")
-
-        # --- Step 5: 获取S2参考文献及其PubMed详情 ---
-        s2_paper_id_original_for_refs = original_s2_info.get('paperId') if original_s2_info else None
-        if s2_paper_id_original_for_refs:
-            print(f"正在从 Semantic Scholar (PaperID: {s2_paper_id_original_for_refs}) 获取参考文献DOI列表...")
-            s2_reference_dois = await s2_client.get_references_by_paper_id(s2_paper_id_original_for_refs)
-
-            if s2_reference_dois:
-                print(f"  S2返回 {len(s2_reference_dois)} 条参考文献DOI。")
-                print(f"  正在从 Semantic Scholar 批量获取这些参考文献的详细信息...")
-                s2_references_s2_details = await s2_client.batch_get_paper_details_by_dois(s2_reference_dois)
-                valid_s2_ref_details_count = sum(1 for detail in s2_references_s2_details.values() if detail)
-                print(f"    成功从S2获取了 {valid_s2_ref_details_count} 篇参考文献的详细信息。")
-
-                # 从S2获取的参考文献详情中提取PMID，然后批量从PubMed补充
-                pmids_from_s2_refs: List[str] = []
-                for ref_doi, s2_detail in s2_references_s2_details.items():
-                    if s2_detail and isinstance(s2_detail.get('externalIds'), dict):
-                        pmid = s2_detail['externalIds'].get('PubMed')
-                        if pmid:
-                            pmids_from_s2_refs.append(pmid)
+            # 提取PMID以便获取更多信息
+            pmids = []
+            for ref in reference_articles:
+                if (isinstance(ref, dict) and ref.get('externalIds') 
+                    and isinstance(ref.get('externalIds'), dict) 
+                    and ref['externalIds'].get('PubMed')):
+                    pmids.append(ref['externalIds'].get('PubMed'))
+            
+            # 如果找到PMID，获取额外的PubMed信息
+            if pmids:
+                logger.info(f"发现 {len(pmids)} 个参考文献PMID，获取PubMed补充信息...")
+                pubmed_details = await metadata_fetching_agent.pubmed_client.batch_get_article_details_by_pmids(pmids, email)
+                logger.info(f"成功获取 {len(pubmed_details)} 个PubMed补充信息")
                 
-                if pmids_from_s2_refs:
-                    unique_pmids_from_s2_refs = sorted(list(set(pmids_from_s2_refs))) # 去重并排序
-                    print(f"  从S2参考文献中提取到 {len(unique_pmids_from_s2_refs)} 个唯一PMID。正在从PubMed批量获取/核实信息...")
-                    s2_references_pubmed_details = await pubmed_client.batch_get_article_details_by_pmids(unique_pmids_from_s2_refs, email)
-                    print(f"    成功从PubMed获取/核实了 {len(s2_references_pubmed_details)} 篇S2参考文献的PMID信息。")
-                else:
-                    print("  S2返回的参考文献中未能提取到PMID用于PubMed核实。")
-            else:
-                print("  未能从Semantic Scholar获取参考文献DOI列表。")
-        else:
-            print("无S2 PaperID用于查询参考文献。")
-        print("==================================\n")
+                # TODO: 可以选择将PubMed信息合并到参考文献中
+        except Exception as e:
+            logger.error(f"获取参考文献时出错: {e}")
+            import traceback
+            logger.debug(f"错误详情: {traceback.format_exc()}")
+    else:
+        logger.warning("未获取到原文的Semantic Scholar ID，无法获取参考文献")
+            
+    # 统计信息
+    logger.info(f"数据收集完成: 原始文章信息已获取，找到 {len(related_articles)} 篇相关文献和 {len(reference_articles)} 篇参考文献")
+
+    # --- Step 4: 方法分析 ---
+    try:
+        logger.info("开始分析文献方法...")
+        methodology = await methodology_analysis_agent.analyze_methodology(md_content)
+        logger.info(f"方法分析结果: {methodology}")
+    except Exception as e:
+        logger.error(f"方法分析失败: {e}")
+        methodology = {"error": str(e), "方法类型": "未知", "关键技术": "未知", "创新方法": "未知"}
+
+    # --- Step 5: 创新点提取 ---
+    try:
+        logger.info("开始提取创新点...")
+        innovations = await innovation_extraction_agent.extract_innovations(md_content)
+        logger.info(f"创新点提取结果: {innovations}")
+    except Exception as e:
+        logger.error(f"创新点提取失败: {e}")
+        innovations = {"error": str(e), "核心创新": "未知", "潜在应用": "未知"}
+
+    # --- Step 6: 问答生成 ---
+    try:
+        logger.info("开始生成问答...")
+        qa = await qa_generation_agent.generate_qa(md_content)
+        logger.info(f"问答生成结果: {qa}")
+    except Exception as e:
+        logger.error(f"问答生成失败: {e}")
+        qa = {"error": str(e), "问题1": "未能生成问题", "答案1": "", 
+              "问题2": "", "答案2": "", "问题3": "", "答案3": ""}
+
+    # --- Step 7: 输出 ---
+    logger.info("处理完成！")
+    
+    # 添加: 将结果保存到文件
+    await save_results_to_files(
+        pdf_path=clean_pdf_path,
+        doi=doi,
+        original_s2_info=original_s2_info,
+        original_pubmed_info=original_pubmed_info,
+        related_articles=related_articles,
+        reference_articles=reference_articles,
+        methodology=methodology,
+        innovations=innovations,
+        qa=qa
+    )
+
+async def save_results_to_files(
+    pdf_path, doi, original_s2_info, original_pubmed_info, 
+    related_articles, reference_articles, methodology, innovations, qa
+):
+    """将分析结果保存到文件"""
+    # 获取PDF文件名（不含扩展名）作为输出目录名
+    pdf_filename = os.path.basename(pdf_path)
+    pdf_name_without_ext = os.path.splitext(pdf_filename)[0]
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # 创建输出目录 - 这是主输出文件夹
+    output_dir = os.path.join(config.OUTPUT_BASE_DIR, pdf_name_without_ext)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    # 1. 保存JSON格式的原始数据
+    json_data = {
+        "metadata": {
+            "pdf_file": pdf_path,
+            "doi": doi,
+            "timestamp": timestamp
+        },
+        "original_article": {
+            "s2_info": original_s2_info,
+            "pubmed_info": original_pubmed_info
+        },
+        "related_articles_count": len(related_articles) if related_articles else 0,
+        "reference_articles_count": len(reference_articles) if reference_articles else 0,
+        "analysis_results": {
+            "methodology": methodology,
+            "innovations": innovations,
+            "qa_pairs": qa
+        }
+    }
+    
+    json_output_path = os.path.join(output_dir, f"{pdf_name_without_ext}_analysis_{timestamp}.json")
+    with open(json_output_path, 'w', encoding='utf-8') as f:
+        json.dump(json_data, f, ensure_ascii=False, indent=2)
+    logger.info(f"已将分析结果保存到JSON文件: {json_output_path}")
+    
+    # 2. 生成Markdown格式的人类可读报告
+    md_content = generate_markdown_report(
+        pdf_name_without_ext, doi, original_s2_info, 
+        original_pubmed_info, methodology, innovations, qa,
+        related_count=len(related_articles) if related_articles else 0,
+        reference_count=len(reference_articles) if reference_articles else 0
+    )
+    
+    md_output_path = os.path.join(output_dir, f"{pdf_name_without_ext}_report_{timestamp}.md")
+    with open(md_output_path, 'w', encoding='utf-8') as f:
+        f.write(md_content)
+    logger.info(f"已将分析报告保存到Markdown文件: {md_output_path}")
+    
+    # 3. 【新增】保存相关文献和参考文献到CSV文件
+    # 保存相关文献CSV
+    if related_articles:
+        related_csv_path = os.path.join(output_dir, f"{pdf_name_without_ext}_related_articles_{timestamp}.csv")
+        export_articles_to_csv(related_articles, related_csv_path, is_pubmed=True)
+        logger.info(f"已将 {len(related_articles)} 篇相关文献保存到CSV文件: {related_csv_path}")
+    
+    # 保存参考文献CSV
+    if reference_articles:
+        reference_csv_path = os.path.join(output_dir, f"{pdf_name_without_ext}_reference_articles_{timestamp}.csv")
+        export_articles_to_csv(reference_articles, reference_csv_path, is_pubmed=False)
+        logger.info(f"已将 {len(reference_articles)} 篇参考文献保存到CSV文件: {reference_csv_path}")
+    
+    return json_output_path, md_output_path
+
+def export_articles_to_csv(articles, csv_path, is_pubmed=True):
+    """将文章列表导出为CSV文件"""
+    if not articles:
+        logger.warning(f"没有文章数据可导出到 {csv_path}")
+        return
         
-        # --- Step 6: CSV输出 ---
-        # (确保 original_article_details, pubmed_related_articles, s2_references_s2_details, s2_references_pubmed_details 已填充)
-        # CSV文件名基于DOI或PMID
-        csv_file_name_base = "unknown_article"
-        if original_pubmed_info and original_pubmed_info.get('pmid'):
-            csv_file_name_base = original_pubmed_info['pmid']
-        elif original_s2_info and original_s2_info.get('paperId'):
-            csv_file_name_base = original_s2_info['paperId'].replace(':', '_') # S2 ID可能包含冒号
-        elif doi:
-            csv_file_name_base = "".join(c if c.isalnum() else "_" for c in doi)
-
-        csv_file_name = f"{csv_file_name_base}_full_report.csv"
-        csv_output_dir = os.path.join(OUTPUT_BASE_DIR, "csv_reports")
-        os.makedirs(csv_output_dir, exist_ok=True)
-        csv_file_path = os.path.join(csv_output_dir, csv_file_name)
-        print(f"正在将所有信息保存到 CSV 文件: {csv_file_path}")
-
-        # 定义更全面的CSV列名
-        fieldnames = [
-            "Type", "DataSource", "DOI", 
-            "S2_PaperID", "PubMed_PMID", "PubMed_PMCID",
-            "Title", "Abstract", "Authors", "Journal_Venue", "Year_PublicationDate",
-            "S2_CitationCount", "S2_ReferenceCount", "S2_InfluentialCitationCount", 
-            "S2_IsOpenAccess", "S2_FieldsOfStudy", "S2_PublicationTypes",
-            "PubMed_Link", "PMCID_Link"
-            # S2_References_DOIs (原始文章的S2参考文献DOI列表) 可以单独存储或作为原始文章行的一个字段
-        ]
-
-        with open(csv_file_path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+    # 统一字段名格式，确保参考文献和相关文献使用相同的字段名
+    standard_fields = [
+        "pmid", "title", "authors", "journal", "pub_date", "abstract", "doi",
+        "pmid_link", "pmcid", "pmcid_link"
+    ]
+    
+    # 确保所有文章记录都有所有字段（如果缺少则设为空字符串）
+    for article in articles:
+        for field in standard_fields:
+            if field not in article:
+                article[field] = ""
+        
+        # 特别处理链接字段，只有在有对应ID时才设置链接
+        # 处理 pmid_link
+        if article.get("pmid"):
+            if not article.get("pmid_link"):
+                article["pmid_link"] = f"https://pubmed.ncbi.nlm.nih.gov/{article['pmid']}/"
+        else:
+            article["pmid_link"] = ""
+            
+        # 处理 pmcid_link
+        if article.get("pmcid"):
+            if not article.get("pmcid_link"):
+                article["pmcid_link"] = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{article['pmcid']}/"
+        else:
+            article["pmcid_link"] = ""
+    
+    try:
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=standard_fields)
             writer.writeheader()
+            for article in articles:
+                # 只写入标准字段
+                row = {field: article.get(field, "") for field in standard_fields}
+                writer.writerow(row)
+        logger.info(f"已将 {len(articles)} 篇文章导出到 {csv_path}")
+    except Exception as e:
+        logger.error(f"导出CSV时出错: {e}")
 
-            # 1. 写入原始文章信息
-            row_original = {"Type": "Original", "DOI": doi} # 修正缩进
-            if original_s2_info:
-                # S2作者列表处理
-                s2_authors_list = original_s2_info.get('authors', [])
-                s2_author_names = ", ".join([a.get('name') for a in s2_authors_list if a.get('name')])
-                row_original.update({
-                    "DataSource": "Semantic Scholar" + (" + PubMed" if original_pubmed_info else ""),
-                    "S2_PaperID": original_s2_info.get('paperId'),
-                    "Title": original_s2_info.get('title'),
-                    "Abstract": original_s2_info.get('abstract'),
-                    "Authors": s2_author_names,
-                    "Journal_Venue": original_s2_info.get('venue'),
-                    "Year_PublicationDate": original_s2_info.get('year'),
-                    "S2_CitationCount": original_s2_info.get('citationCount'),
-                    "S2_ReferenceCount": original_s2_info.get('referenceCount'),
-                    "S2_InfluentialCitationCount": original_s2_info.get('influentialCitationCount'),
-                    "S2_IsOpenAccess": str(original_s2_info.get('isOpenAccess', '')),
-                    "S2_FieldsOfStudy": json.dumps(original_s2_info.get('fieldsOfStudy')) if original_s2_info.get('fieldsOfStudy') else '',
-                    "S2_PublicationTypes": json.dumps(original_s2_info.get('publicationTypes')) if original_s2_info.get('publicationTypes') else '',
-                    "PubMed_PMID": original_s2_info.get('externalIds', {}).get('PubMed'),
-                    "PubMed_PMCID": original_s2_info.get('externalIds', {}).get('PMC'),
-                })
-            if original_pubmed_info: # 用PubMed信息补充或覆盖
-                row_original["DataSource"] = "PubMed" + (" + S2" if original_s2_info else "")
-                if not row_original.get("Title"): row_original["Title"] = original_pubmed_info.get('title') # 优先S2，若无则用PubMed
-                row_original["Abstract"] = original_pubmed_info.get('abstract') or row_original.get("Abstract") # 优先PubMed摘要
-                # PubMed作者列表处理 (覆盖或补充S2的)
-                pubmed_authors_list = original_pubmed_info.get('authors')
-                row_original["Authors"] = ", ".join(pubmed_authors_list if pubmed_authors_list else []) or row_original.get("Authors")
-                row_original["Journal_Venue"] = original_pubmed_info.get('journal') or row_original.get("Journal_Venue")
-                row_original["Year_PublicationDate"] = original_pubmed_info.get('publication_date') or row_original.get("Year_PublicationDate")
-                row_original["PubMed_PMID"] = original_pubmed_info.get('pmid') or row_original.get("PubMed_PMID")
-                row_original["PubMed_PMCID"] = original_pubmed_info.get('pmcid') or row_original.get("PubMed_PMCID")
-                row_original["PubMed_Link"] = original_pubmed_info.get('pmid_link')
-                row_original["PMCID_Link"] = original_pubmed_info.get('pmcid_link')
-            writer.writerow(row_original)
-
-            # 2. 写入PubMed相关文献
-            for article in pubmed_related_articles:
-                writer.writerow({
-                    "Type": "Related", "DataSource": "PubMed",
-                    "DOI": None, # PubMed相关文献不直接提供DOI，但可以通过PMID反查
-                    "PubMed_PMID": article.get('pmid'), "PubMed_PMCID": article.get('pmcid'),
-                    "Title": article.get('title'), "Abstract": article.get('abstract'),
-                    "Authors": ", ".join(article.get('authors') or []), 
-                    "Journal_Venue": article.get('journal'),
-                    "Year_PublicationDate": article.get('publication_date'),
-                    "PubMed_Link": article.get('pmid_link'), "PMCID_Link": article.get('pmcid_link')
-                })
-
-            # 3. 写入S2参考文献 (结合S2详情和PubMed补充详情)
-            # 创建一个字典，以PMID为键，存储PubMed补充的参考文献详情
-            pubmed_ref_details_map = {ref.get('pmid'): ref for ref in s2_references_pubmed_details if ref.get('pmid')}
-
-            for ref_doi, s2_ref_detail in s2_references_s2_details.items():
-                if not s2_ref_detail: continue # 跳过未能从S2获取详情的
-                
-                row_ref = {"Type": "Reference", "DOI": ref_doi, "DataSource": "Semantic Scholar"}
-                row_ref.update({
-                    "S2_PaperID": s2_ref_detail.get('paperId'),
-                    "Title": s2_ref_detail.get('title'),
-                    "Abstract": s2_ref_detail.get('abstract'),
-                    # S2参考文献的作者列表处理
-                    "Authors": ", ".join([a.get('name') for a in s2_ref_detail.get('authors', []) if a.get('name')]),
-                    "Journal_Venue": s2_ref_detail.get('venue'),
-                    "Year_PublicationDate": s2_ref_detail.get('year'),
-                    "S2_CitationCount": s2_ref_detail.get('citationCount'),
-                    "S2_ReferenceCount": s2_ref_detail.get('referenceCount'),
-                    "S2_InfluentialCitationCount": s2_ref_detail.get('influentialCitationCount'),
-                    "S2_IsOpenAccess": str(s2_ref_detail.get('isOpenAccess', '')),
-                    "S2_FieldsOfStudy": json.dumps(s2_ref_detail.get('fieldsOfStudy')) if s2_ref_detail.get('fieldsOfStudy') else '',
-                    "S2_PublicationTypes": json.dumps(s2_ref_detail.get('publicationTypes')) if s2_ref_detail.get('publicationTypes') else '',
-                })
-                
-                s2_ref_pmid = s2_ref_detail.get('externalIds', {}).get('PubMed')
-                row_ref["PubMed_PMID"] = s2_ref_pmid
-                row_ref["PubMed_PMCID"] = s2_ref_detail.get('externalIds', {}).get('PMC')
-
-                # 如果有来自PubMed的补充信息
-                if s2_ref_pmid and s2_ref_pmid in pubmed_ref_details_map:
-                    pubmed_supplement = pubmed_ref_details_map[s2_ref_pmid]
-                    row_ref["DataSource"] += " + PubMed (verified)"
-                    # 可以选择性地用PubMed信息覆盖或补充S2信息
-                    row_ref["Abstract"] = pubmed_supplement.get('abstract') or row_ref["Abstract"] # 优先PubMed摘要
-                    # PubMed补充的作者列表处理
-                    pubmed_ref_authors_list = pubmed_supplement.get('authors')
-                    row_ref["Authors"] = ", ".join(pubmed_ref_authors_list if pubmed_ref_authors_list else []) or row_ref["Authors"]
-                    row_ref["Journal_Venue"] = pubmed_supplement.get('journal') or row_ref["Journal_Venue"]
-                    row_ref["Year_PublicationDate"] = pubmed_supplement.get('publication_date') or row_ref["Year_PublicationDate"]
-                    row_ref["PubMed_Link"] = pubmed_supplement.get('pmid_link')
-                    row_ref["PMCID_Link"] = pubmed_supplement.get('pmcid_link')
-                writer.writerow(row_ref)
-            print(f"所有信息已成功保存到: {csv_file_path}\n")
-
-    elif doi and not email:
-         print("由于未配置 NCBI 邮箱，跳过 PubMed 文章详情和相关文章获取。")
-    else: # not doi
-        print("由于未配置DOI，跳过PubMed文章详情和相关文章获取。")
-
-
-    # Step 8: 将PDF转换为Markdown (保持原有功能)
-    pdf_basename_no_ext = os.path.splitext(os.path.basename(pdf_path))[0]
-    output_dir_for_pdf = os.path.join(OUTPUT_BASE_DIR, pdf_basename_no_ext)
+def generate_markdown_report(
+    pdf_name, doi, s2_info, pubmed_info, methodology, 
+    innovations, qa_pairs, related_count=0, reference_count=0
+):
+    """生成Markdown格式的分析报告"""
+    title = s2_info.get("title") if s2_info and "title" in s2_info else pdf_name
     
-    md_path = convert_pdf_to_markdown(pdf_path, output_dir_for_pdf)
-    if md_path:
-        print(f"PDF已转换为Markdown，保存在: {md_path}")
+    # 准备作者列表
+    authors = []
+    if s2_info and "authors" in s2_info:
+        authors = [author.get("name", "") for author in s2_info["authors"] if author.get("name")]
+    
+    # 生成Markdown内容
+    md = []
+    md.append(f"# {title}")
+    md.append("")
+    
+    # 文献元数据
+    md.append("## 文献信息")
+    md.append("")
+    md.append(f"- **DOI**: {doi}")
+    if authors:
+        md.append(f"- **作者**: {', '.join(authors)}")
+    if s2_info:
+        md.append(f"- **发表年份**: {s2_info.get('year', '未知')}")
+        md.append(f"- **期刊/会议**: {s2_info.get('venue', '未知')}")
+        if "fieldsOfStudy" in s2_info:
+            fields = s2_info.get("fieldsOfStudy", [])
+            if fields:
+                md.append(f"- **研究领域**: {', '.join(fields)}")
+    
+    # 相关文献与参考文献统计
+    md.append(f"- **相关文献数量**: {related_count}")
+    md.append(f"- **参考文献数量**: {reference_count}")
+    md.append("")
+    
+    # 摘要
+    if s2_info and "abstract" in s2_info and s2_info["abstract"]:
+        md.append("## 摘要")
+        md.append("")
+        md.append(s2_info["abstract"] or "未提供摘要")
+        md.append("")
+    elif pubmed_info and "abstract" in pubmed_info and pubmed_info["abstract"]:
+        md.append("## 摘要")
+        md.append("")
+        md.append(pubmed_info["abstract"] or "未提供摘要")
+        md.append("")
+    
+    # 方法学分析
+    md.append("## 方法分析")
+    md.append("")
+    if methodology:
+        if "方法类型" in methodology:
+            md.append(f"### 方法类型")
+            md.append(f"{methodology['方法类型'] or '未知'}")
+            md.append("")
+        
+        if "关键技术" in methodology:
+            md.append("### 关键技术")
+            tech_list = methodology["关键技术"]
+            if isinstance(tech_list, list) and tech_list:
+                for tech in tech_list:
+                    if tech: # 确保技术项不为None
+                        md.append(f"- {tech}")
+                md.append("")
+            else:
+                md.append("- 未提供关键技术信息")
+                md.append("")
+        
+        if "创新方法" in methodology:
+            md.append("### 创新方法")
+            method_list = methodology["创新方法"]
+            if isinstance(method_list, list) and method_list:
+                for method in method_list:
+                    if method: # 确保方法项不为None
+                        md.append(f"- {method}")
+                md.append("")
+            else:
+                md.append("- 未提供创新方法信息")
+                md.append("")
+    else:
+        md.append("*未能获取方法分析结果*")
+        md.append("")
+    
+    # 创新点分析
+    md.append("## 创新点分析")
+    md.append("")
+    if innovations:
+        if "核心创新" in innovations:
+            md.append("### 核心创新")
+            innovation_list = innovations["核心创新"]
+            if isinstance(innovation_list, list) and innovation_list:
+                for innovation in innovation_list:
+                    if innovation: # 确保创新项不为None
+                        md.append(f"- {innovation}")
+                md.append("")
+            else:
+                md.append("- 未提供核心创新信息")
+                md.append("")
+        
+        if "潜在应用" in innovations:
+            md.append("### 潜在应用")
+            application_list = innovations["潜在应用"]
+            if isinstance(application_list, list) and application_list:
+                for application in application_list:
+                    if application: # 确保应用项不为None
+                        md.append(f"- {application}")
+                md.append("")
+            else:
+                md.append("- 未提供潜在应用信息")
+                md.append("")
+    else:
+        md.append("*未能获取创新点分析结果*")
+        md.append("")
+    
+    # 问答内容
+    md.append("## 问答内容")
+    md.append("")
+    if qa_pairs:
+        qnum = 1
+        while f"问题{qnum}" in qa_pairs and f"答案{qnum}" in qa_pairs:
+            question = qa_pairs[f"问题{qnum}"] or f"问题{qnum}"
+            answer = qa_pairs[f"答案{qnum}"] or "未提供答案"
+            md.append(f"### Q{qnum}: {question}")
+            md.append(f"{answer}")
+            md.append("")
+            qnum += 1
+    else:
+        md.append("*未能获取问答内容*")
+        md.append("")
+    
+    # 过滤掉可能的None值
+    md = [item for item in md if item is not None]
+    
+    return "\n".join(md)
 
 if __name__ == "__main__":
     # 命令行参数解析
@@ -312,6 +470,7 @@ if __name__ == "__main__":
 
     # 在参数解析后，实际运行主逻辑前设置日志
     setup_logging() 
+    logger.info("SLAIS应用程序启动")
     
     # 运行主函数
     asyncio.run(main(args.pdf))

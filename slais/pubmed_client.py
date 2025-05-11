@@ -177,11 +177,11 @@ def parse_pubmed_article(article_xml: ET.Element) -> Optional[ArticleDetails]:
 
 class PubMedClient:
     def __init__(self):
-        self.base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
-        self.tool_name = "slais_pubmed_client"
-        self.efetch_batch_size = 200
+        self.base_url = config.PUBMED_API_BASE_URL
+        self.tool_name = config.PUBMED_TOOL_NAME
+        self.efetch_batch_size = config.PUBMED_EFETCH_BATCH_SIZE
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(stop=stop_after_attempt(config.PUBMED_RETRY_COUNT), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def get_article_details(self, doi: str, email: str) -> Optional[ArticleDetails]:
         logger.info(f"开始为 DOI: {doi} 搜索 PubMed (使用邮箱: {email})")
         if not email or '@' not in email:
@@ -194,7 +194,7 @@ class PubMedClient:
                 'db': 'pubmed', 'term': f"{urllib.parse.quote(doi)}[doi]", 
                 'retmax': 1, 'retmode': 'xml', 'email': email, 'tool': self.tool_name
             }
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client:
                 response_esearch = await client.get(f"{self.base_url}esearch.fcgi", params=esearch_params, headers=headers)
                 response_esearch.raise_for_status()
                 esearch_xml = ET.fromstring(response_esearch.content)
@@ -210,7 +210,7 @@ class PubMedClient:
                 'db': 'pubmed', 'id': initial_pmid, 'rettype': 'xml', 
                 'retmode': 'xml', 'email': email, 'tool': self.tool_name
             }
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client:
                 response_efetch = await client.get(f"{self.base_url}efetch.fcgi", params=efetch_params, headers=headers)
                 response_efetch.raise_for_status()
                 efetch_xml = ET.fromstring(response_efetch.content)
@@ -229,7 +229,7 @@ class PubMedClient:
         except ET.ParseError as e: logger.error(f"XML 解析错误 (DOI: {doi}): {e}", exc_info=True); return None
         except Exception as e: logger.exception(f"获取文章详情时发生意外错误 (DOI: {doi}): {e}"); return None
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(stop=stop_after_attempt(config.PUBMED_RETRY_COUNT), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def get_article_details_by_pmid(self, pmid: str, email: str) -> Optional[ArticleDetails]:
         """通过PMID获取文章详情。"""
         if not pmid: return None
@@ -240,7 +240,7 @@ class PubMedClient:
             'retmode': 'xml', 'email': email, 'tool': self.tool_name
         }
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client:
                 response_efetch = await client.get(f"{self.base_url}efetch.fcgi", params=efetch_params, headers=headers)
                 response_efetch.raise_for_status()
                 efetch_xml = ET.fromstring(response_efetch.content)
@@ -270,7 +270,7 @@ class PubMedClient:
             # NCBI建议没有API key时不超过3次请求/秒。我们在这里增加一个小的固定延迟。
             # 实际的速率限制应该由调用者（如batch_get_article_details_by_dois中的循环）或更高级别的速率限制器处理。
             # 但为了防止并发的_get_pmid_for_doi本身触发问题，这里加一个小的延迟。
-            await asyncio.sleep(0.35) # ~3 req/sec
+            await asyncio.sleep(config.PUBMED_REQUEST_DELAY) # 使用配置的延迟
             try:
                 logger.debug(f"PubMedClient: Fetching PMID for DOI: {doi}")
                 response_esearch = await client.get(f"{self.base_url}esearch.fcgi", params=esearch_params)
@@ -301,8 +301,8 @@ class PubMedClient:
         pmids_map: Dict[str, str] = {} # doi -> pmid
         valid_dois = [d for d in dois if d and isinstance(d, str)]
 
-        semaphore = asyncio.Semaphore(3)
-        async with httpx.AsyncClient(timeout=30.0, headers={'User-Agent': f'{self.tool_name}/1.0 ({email})'}) as client:
+        semaphore = asyncio.Semaphore(3) # 信号量限制并发的 _get_pmid_for_doi 调用
+        async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT, headers={'User-Agent': f'{self.tool_name}/1.0 ({email})'}) as client:
             pmid_tasks = {doi: self._get_pmid_for_doi(doi, email, client, semaphore) for doi in valid_dois}
             pmid_results = await asyncio.gather(*pmid_tasks.values(), return_exceptions=True)
             
@@ -329,7 +329,7 @@ class PubMedClient:
         pmid_batches = [pmids[i:i + self.efetch_batch_size] for i in range(0, len(pmids), self.efetch_batch_size)]
         headers = {'User-Agent': f'{self.tool_name}/1.0 ({email})'}
 
-        async with httpx.AsyncClient(timeout=60.0, headers=headers) as client:
+        async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT * 2, headers=headers) as client: # 批量请求可能需要更长时间
             for i, pmid_batch in enumerate(pmid_batches):
                 if not pmid_batch: continue
                 logger.info(f"正在处理PMID批次 {i+1}/{len(pmid_batches)} (数量: {len(pmid_batch)}) (PubMed efetch)")
@@ -355,12 +355,12 @@ class PubMedClient:
                     logger.error(f"批量efetch PMIDs时发生错误: {e}")
                 
                 if i < len(pmid_batches) - 1: # 批次间延迟
-                    await asyncio.sleep(0.5) 
+                    await asyncio.sleep(config.PUBMED_REQUEST_DELAY)
                     
         logger.info(f"批量获取完成，共获得 {len(all_article_details)} 篇文章的详细信息。")
         return all_article_details
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    @retry(stop=stop_after_attempt(config.PUBMED_RETRY_COUNT), wait=wait_exponential(multiplier=1, min=4, max=10))
     async def get_related_articles(self, initial_pmid: str, email: str) -> List[ArticleDetails]:
         years_back = config.RELATED_ARTICLES_YEARS_BACK
         logger.info(f"开始为 PMID: {initial_pmid} 查找最近 {years_back} 年内的相关文章 (使用邮箱: {email})")
@@ -376,7 +376,7 @@ class PubMedClient:
                 'linkname': 'pubmed_pubmed', 'cmd': 'neighbor_history', 
                 'email': email, 'tool': self.tool_name
             }
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client:
                 response_elink = await client.get(f"{self.base_url}elink.fcgi", params=elink_params, headers=headers)
                 response_elink.raise_for_status()
                 elink_xml = ET.fromstring(response_elink.content)
@@ -398,7 +398,7 @@ class PubMedClient:
                 'mindate': min_date, 'maxdate': max_date, 'email': email, 
                 'tool': self.tool_name, 'usehistory': 'y'
             }
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client:
                 response_esearch = await client.get(f"{self.base_url}esearch.fcgi", params=esearch_params, headers=headers)
                 response_esearch.raise_for_status()
                 esearch_xml = ET.fromstring(response_esearch.content)
@@ -415,7 +415,7 @@ class PubMedClient:
 
             num_batches = math.ceil(total_related_count / self.efetch_batch_size)
             logger.info(f"将分 {num_batches} 批次获取 {total_related_count} 篇相关文章的详细信息 (每批最多 {self.efetch_batch_size} 篇)。")
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client: # 使用配置的超时
                 for i in range(num_batches):
                     retstart = i * self.efetch_batch_size
                     current_batch_size = min(self.efetch_batch_size, total_related_count - retstart)
@@ -435,7 +435,7 @@ class PubMedClient:
                         if details: related_articles_list.append(details)
                         else: logger.warning(f"无法解析批次 {i+1} 中的相关文章 PMID: {article_xml_elem.findtext('./MedlineCitation/PMID', '未知PMID')}")
                     if num_batches > 1 and i < num_batches - 1:
-                         await asyncio.sleep(0.4)
+                         await asyncio.sleep(config.PUBMED_REQUEST_DELAY) # 使用配置的延迟
             logger.info(f"成功检索并解析了 {len(related_articles_list)}/{total_related_count} 篇相关文章的详细信息。")
             return related_articles_list
         except httpx.HTTPStatusError as e:

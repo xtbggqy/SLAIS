@@ -7,34 +7,40 @@ from magic_pdf.data.data_reader_writer import FileBasedDataWriter, FileBasedData
 from magic_pdf.data.dataset import PymuDocDataset
 from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.config.enums import SupportedPdfParseMethod
-from .utils.logging_utils import logger
+from slais.utils.logging_utils import logger
+from slais import config
+from pathlib import Path
 
-def convert_pdf_to_markdown(pdf_path, output_dir=None):
-    """
-    将PDF文件转换为Markdown格式。
+async def convert_pdf_to_markdown(pdf_path, output_dir=None):
+    """将PDF转换为Markdown格式
     
-    参数:
-        pdf_path (str): 输入PDF文件的路径
-        output_dir (str, optional): 输出目录，默认为None。如果未提供，将根据PDF文件名创建输出目录。
-    返回:
-        str: 生成的Markdown文件路径
+    Args:
+        pdf_path: PDF文件路径
+        output_dir: 输出目录，如果为None，则使用最终输出目录而非临时目录
+    
+    Returns:
+        生成的Markdown文件路径（字符串）
     """
     # 获取PDF文件名（不含扩展名）
-    pdf_file_name = os.path.basename(pdf_path)
-    name_without_suff = pdf_file_name.split(".")[0]
+    pdf_filename = os.path.basename(pdf_path)
+    pdf_name_without_ext = os.path.splitext(pdf_filename)[0]
     
-    logger.info(f"开始转换PDF文件：{pdf_file_name}")
-    
-    # 准备输出目录
+    # 如果未指定输出目录，使用默认的最终输出目录
     if output_dir is None:
-        output_dir = os.path.join("output", name_without_suff)
+        output_dir = os.path.join(config.OUTPUT_BASE_DIR, pdf_name_without_ext)
     
-    local_image_dir = os.path.join(output_dir, "images")
-    local_md_dir = output_dir
-    image_dir = os.path.basename(local_image_dir)
+    # 创建专门的Markdown子文件夹
+    markdown_dir = os.path.join(output_dir, f"{pdf_name_without_ext}_markdown")
+    Path(markdown_dir).mkdir(parents=True, exist_ok=True)
+    logger.info(f"创建Markdown输出目录：{markdown_dir}")
+    
+    # 使用 config.PDF_IMAGES_SUBDIR 作为图片子目录名
+    local_image_dir = os.path.join(markdown_dir, config.PDF_IMAGES_SUBDIR)
+    local_md_dir = markdown_dir
+    image_dir = os.path.basename(local_image_dir) # 这将是 "images" 或 config.PDF_IMAGES_SUBDIR 的值
     
     os.makedirs(local_image_dir, exist_ok=True)
-    logger.info(f"输出目录已准备好：{output_dir}")
+    logger.info(f"图片目录已准备好：{local_image_dir}")
     
     # 保存原始日志级别并临时设置为ERROR
     original_log_levels = {}
@@ -78,19 +84,32 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None):
         logger.info("PDF处理完成")
         
         # 绘制模型结果
-        infer_result.draw_model(os.path.join(local_md_dir, f"{name_without_suff}_model.pdf"))
-        logger.info("模型结果已绘制")
-        
+        try:
+            infer_result.draw_model(os.path.join(local_md_dir, f"{pdf_name_without_ext}_model.pdf"))
+            logger.info("模型结果已绘制")
+        except Exception as e:
+            logger.error(f"绘制模型结果时出错: {e}")
+
         # 获取模型推断结果
-        model_inference_result = infer_result.get_infer_res()
+        try:
+            model_inference_result = infer_result.get_infer_res()
+        except Exception as e:
+            logger.error(f"获取模型推断结果时出错: {e}")
+            model_inference_result = None
         
         # 绘制布局结果
-        pipe_result.draw_layout(os.path.join(local_md_dir, f"{name_without_suff}_layout.pdf"))
-        logger.info("布局结果已绘制")
+        try:
+            pipe_result.draw_layout(os.path.join(local_md_dir, f"{pdf_name_without_ext}_layout.pdf"))
+            logger.info("布局结果已绘制")
+        except Exception as e:
+            logger.error(f"绘制布局结果时出错: {e}")
         
         # 绘制跨度结果
-        pipe_result.draw_span(os.path.join(local_md_dir, f"{name_without_suff}_spans.pdf"))
-        logger.info("跨度结果已绘制")
+        try:
+            pipe_result.draw_span(os.path.join(local_md_dir, f"{pdf_name_without_ext}_spans.pdf"))
+            logger.info("跨度结果已绘制")
+        except Exception as e:
+            logger.error(f"绘制跨度结果时出错: {e}")
         
         # 获取原始Markdown内容和内容列表
         md_content_original = pipe_result.get_markdown(image_dir)
@@ -119,11 +138,21 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None):
             
             image_files.sort()
             
-            for idx, img_filename in enumerate(image_files):
+            # 用于生成新的、不冲突的文件名
+            target_image_idx = 0
+            
+            for img_filename in image_files: # 不再使用 enumerate 的 idx 直接作为新文件名索引
                 original_image_path = os.path.join(local_image_dir, img_filename)
                 _, ext = os.path.splitext(img_filename)
-                new_image_filename = f"image_{idx:03d}{ext}"
-                new_image_path = os.path.join(local_image_dir, new_image_filename)
+                
+                # 寻找一个不冲突的目标文件名
+                while True:
+                    new_image_filename = f"image_{target_image_idx:03d}{ext}"
+                    new_image_path = os.path.join(local_image_dir, new_image_filename)
+                    if not os.path.exists(new_image_path) or original_image_path == new_image_path:
+                        # 如果目标路径不存在，或者目标路径就是原始路径（意味着文件已是期望格式，但仍需检查md链接）
+                        break
+                    target_image_idx += 1
                 
                 if image_dir:
                     original_md_image_path = f"{image_dir}/{img_filename}"
@@ -131,16 +160,27 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None):
                 else:
                     original_md_image_path = img_filename
                     new_md_image_path = new_image_filename
-                
-                try:
-                    os.rename(original_image_path, new_image_path)
-                    logger.info(f"图片已重命名: '{img_filename}' -> '{new_image_filename}'")
-                    
+
+                renamed_successfully = False
+                if original_image_path != new_image_path: # 只有当源文件名和目标文件名不同时才尝试重命名
+                    try:
+                        os.rename(original_image_path, new_image_path)
+                        logger.info(f"图片已重命名: '{img_filename}' -> '{new_image_filename}'")
+                        renamed_successfully = True
+                    except OSError as e:
+                        logger.error(f"重命名图片失败 '{original_image_path}' 到 '{new_image_path}': {e}")
+                else: # 文件名已经是目标格式，不需要重命名
+                    logger.info(f"图片 '{img_filename}' 已是目标格式 '{new_image_filename}'，跳过重命名。")
+                    renamed_successfully = True # 视为成功，以便更新Markdown链接
+
+                if renamed_successfully:
+                    # 更新Markdown中的链接，即使文件没有被重命名（因为它可能已经是正确的名字但链接是旧的）
                     if original_md_image_path in updated_md_content:
                         updated_md_content = updated_md_content.replace(original_md_image_path, new_md_image_path)
                         logger.info(f"Markdown中的图片链接已更新: '{original_md_image_path}' -> '{new_md_image_path}'")
                         image_counter += 1
                     else:
+                        # 检查另一种路径格式 (正斜杠)
                         alt_original_path = original_md_image_path.replace('\\', '/')
                         alt_new_path = new_md_image_path.replace('\\', '/')
                         if alt_original_path in updated_md_content:
@@ -148,32 +188,35 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None):
                             logger.info(f"Markdown中的图片链接已更新(替代路径格式): '{alt_original_path}' -> '{alt_new_path}'")
                             image_counter += 1
                         else:
-                            logger.warning(f"在Markdown内容中找不到图片路径引用: '{original_md_image_path}' 或 '{alt_original_path}'")
+                            # 如果原始文件名就是新的文件名 (例如 image_000.jpg -> image_000.jpg)
+                            # 并且在markdown中找不到原始路径，这可能是正常的，因为链接可能已经是新的了
+                            if img_filename != new_image_filename:
+                                logger.warning(f"在Markdown内容中找不到图片路径引用: '{original_md_image_path}' 或 '{alt_original_path}'")
                 
-                except OSError as e:
-                    logger.error(f"重命名图片失败 '{original_image_path}' 到 '{new_image_path}': {e}")
+                target_image_idx += 1 # 确保下一个文件尝试下一个索引
         else:
             logger.warning(f"图像目录不存在或不是有效目录: '{local_image_dir}'")
 
         logger.info(f"图片重命名和Markdown链接更新完成。共处理 {image_counter} 张图片。")
         
-        md_file_path = os.path.join(local_md_dir, f"{name_without_suff}.md")
+        md_file_path = os.path.join(local_md_dir, f"{pdf_name_without_ext}.md")
         try:
             with open(md_file_path, "w", encoding="utf-8") as f:
                 f.write(updated_md_content)
             logger.info(f"更新后的Markdown文件已保存：{md_file_path}")
         except IOError as e:
             logger.error(f"保存更新后的Markdown文件失败 '{md_file_path}': {e}")
+            return None
         
         content_list_content = pipe_result.get_content_list(image_dir)
-        pipe_result.dump_content_list(md_writer, f"{name_without_suff}_content_list.json", image_dir)
+        pipe_result.dump_content_list(md_writer, f"{pdf_name_without_ext}_content_list.json", image_dir)
         logger.info("内容列表已保存")
         
         middle_json_content = pipe_result.get_middle_json()
-        pipe_result.dump_middle_json(md_writer, f"{name_without_suff}_middle.json")
+        pipe_result.dump_middle_json(md_writer, f"{pdf_name_without_ext}_middle.json")
         logger.info("中间JSON文件已保存")
         
-        return md_file_path
+        return md_file_path  # 确保返回的是文件路径而不是内容
     finally:
         # 恢复原始日志级别
         for logger_name, level in original_log_levels.items():

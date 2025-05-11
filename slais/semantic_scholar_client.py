@@ -47,15 +47,15 @@ class SemanticScholarClient:
         
         self.timeout = config.S2_REQUEST_TIMEOUT
         self.retry_count = config.S2_RETRY_COUNT
-        self.base_retry_delay = 2.0 # 秒
-        self.jitter_factor = 0.25
+        self.base_retry_delay = config.S2_BASE_RETRY_DELAY # 从配置获取
+        self.jitter_factor = config.S2_JITTER_FACTOR # 从配置获取
         
         # 根据是否有API Key设置不同的速率限制
-        rate_limit_per_minute = 800 if self.api_key else 120 # 参考用户脚本中的值
-        self.token_bucket = TokenBucket(rate_limit_per_minute * 0.8) # 80% buffer
+        rate_limit_per_minute = config.S2_RATE_LIMIT_WITH_KEY if self.api_key else config.S2_RATE_LIMIT_WITHOUT_KEY
+        self.token_bucket = TokenBucket(rate_limit_per_minute * config.S2_RATE_LIMIT_BUFFER_FACTOR)
 
     def _exponential_backoff(self, attempt: int) -> float:
-        delay = min(self.base_retry_delay * (2 ** attempt), 300.0) 
+        delay = min(self.base_retry_delay * (2 ** attempt), 300.0) # 300.0 可以考虑也加入config
         jitter = random.uniform(-self.jitter_factor * delay, self.jitter_factor * delay)
         return max(0.1, delay + jitter)
 
@@ -66,7 +66,7 @@ class SemanticScholarClient:
         """
         if not doi: return None
 
-        fields = "paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,publicationTypes,authors.name,authors.url"
+        fields = config.S2_DEFAULT_FIELDS # 从配置获取
         url = f"{self.base_url}/paper/DOI:{doi}?fields={fields}"
         
         for attempt in range(self.retry_count):
@@ -114,15 +114,9 @@ class SemanticScholarClient:
         valid_dois = [d for d in dois if d and isinstance(d, str) and d.strip()]
         if not valid_dois: return results
 
-        fields = "paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,publicationTypes,authors.name"
+        fields = config.S2_DEFAULT_FIELDS # 从配置获取
         url = f"{self.base_url}/paper/batch"
         
-        # Semantic Scholar 批量API一次最多处理1000个ID，但建议更小批次以避免超时和大型响应
-        # 我们将遵循用户脚本中的BATCH_SIZE，但这里没有直接传递，可以考虑在config中设置S2_BATCH_SIZE
-        # 为简单起见，如果DOIs数量大，可以分批，但这里先尝试一次性（如果aiohttp和S2支持）
-        # 或者，更稳妥的是，如果DOIs列表很大，则分批调用此方法。
-        # 此方法内部先尝试一次批量请求。
-
         payload = {"ids": [f"DOI:{doi}" for doi in valid_dois], "fields": fields}
 
         for attempt in range(self.retry_count):
@@ -143,14 +137,15 @@ class SemanticScholarClient:
                         
                         # 将结果映射回原始DOI
                         for i, paper_data in enumerate(api_data_list):
-                            original_doi = valid_dois[i] # 假设顺序对应
-                            if paper_data and paper_data.get("paperId"):
-                                results[original_doi] = paper_data
-                            elif paper_data: # 有数据但无paperId
-                                logger.warning(f"[S2 Batch] DOI {original_doi} 返回数据但无paperId: {str(paper_data)[:100]}")
-                            # else paper_data is None, results[original_doi] 保持 None
+                            if i < len(valid_dois):  # 确保索引在有效范围内
+                                original_doi = valid_dois[i] # 假设顺序对应
+                                if paper_data and paper_data.get("paperId"):
+                                    results[original_doi] = paper_data
+                                elif paper_data: # 有数据但无paperId
+                                    logger.warning(f"[S2 Batch] DOI {original_doi} 返回数据但无paperId: {str(paper_data)[:100]}")
                         logger.info(f"[S2 Batch] 成功处理 {len(valid_dois)} 个DOI的批量请求，获取到 {sum(1 for r in results.values() if r)} 条有效记录。")
-                        return results
+                        
+                        return results  # 修改：返回以DOI为键的字典，而不是API返回的列表
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                 logger.warning(f"[S2 Batch] 批量获取DOI信息时出错 (尝试 {attempt+1}/{self.retry_count}): {e}")
                 if attempt < self.retry_count - 1: await asyncio.sleep(self._exponential_backoff(attempt))
@@ -160,10 +155,8 @@ class SemanticScholarClient:
                 if attempt < self.retry_count - 1: await asyncio.sleep(self._exponential_backoff(attempt))
                 else: break # 跳出重试
         
-        # 如果批量失败，可以考虑回退到单个请求，但这里为了简化，如果批量失败则返回已有的（可能为空的）results
         if not any(results.values()): # 如果一个都没成功
              logger.warning(f"[S2 Batch] 批量请求最终失败，将尝试逐个获取 {len(valid_dois)} 个DOI。")
-             # 逐个获取 (使用之前的单DOI获取方法)
              tasks = [self.get_paper_details_by_doi(doi) for doi in valid_dois]
              individual_results = await asyncio.gather(*tasks, return_exceptions=True)
              for i, res in enumerate(individual_results):
@@ -174,12 +167,62 @@ class SemanticScholarClient:
                      logger.error(f"[S2 Fallback] 获取DOI {original_doi} 详情时出错: {res}")
         return results
 
+    async def batch_get_paper_details_by_dois_parallel(self, dois, batch_size=10, max_concurrent=5):
+        """
+        并行批量获取论文详细信息，使用异步并发控制
+        
+        Args:
+            dois: DOI列表
+            batch_size: 每批处理的DOI数量
+            max_concurrent: 最大并发请求数
+        
+        Returns:
+            包含论文详细信息的列表
+        """
+        import asyncio
+        from asyncio import Semaphore, gather
+        from slais.utils.logging_utils import logger
+        
+        results = []
+        semaphore = Semaphore(max_concurrent)
+        
+        async def fetch_with_semaphore(doi):
+            async with semaphore:
+                try:
+                    # 使用短暂延迟避免完全同时发起请求
+                    await asyncio.sleep(0.1)
+                    return await self.get_paper_details_by_doi(doi)
+                except Exception as e:
+                    logger.warning(f"获取DOI {doi}的详情时出错: {e}")
+                    return None
+        
+        # 批量处理DOIs
+        for i in range(0, len(dois), batch_size):
+            batch = dois[i:i+batch_size]
+            logger.info(f"并行处理DOI批次 {i//batch_size+1}/{(len(dois)-1)//batch_size+1} ({len(batch)}个DOI)...")
+            
+            # 并行获取此批次的所有DOI详情
+            batch_tasks = [fetch_with_semaphore(doi) for doi in batch]
+            batch_results = await gather(*batch_tasks, return_exceptions=False)
+            
+            # 过滤掉None值并添加到结果中
+            valid_results = [result for result in batch_results if result]
+            results.extend(valid_results)
+            
+            logger.info(f"批次 {i//batch_size+1} 完成，成功获取 {len(valid_results)}/{len(batch)} 个DOI的详情")
+            
+            # 在批次间稍作暂停，避免触发API限制
+            if i + batch_size < len(dois):
+                await asyncio.sleep(1)
+        
+        return results
 
-    async def get_references_by_paper_id(self, paper_id: str) -> List[str]:
+    async def get_references_by_paper_id(self, paper_id: str, limit: int = None) -> List[str]:
         if not paper_id: return []
         references_dois: List[str] = []
-        fields = "citedPaper.externalIds" 
-        url = f"{self.base_url}/paper/{paper_id}/references?fields={fields}&limit=1000" # 尝试获取更多
+        fields = config.S2_REFERENCES_FIELDS # 从配置获取
+        limit = limit or config.S2_REFERENCES_LIMIT # 使用传入的limit参数或配置值
+        url = f"{self.base_url}/paper/{paper_id}/references?fields={fields}&limit={limit}"
 
         for attempt in range(self.retry_count):
             await self.token_bucket.wait_for_token()
@@ -217,3 +260,95 @@ class SemanticScholarClient:
                 if attempt < self.retry_count - 1: await asyncio.sleep(self._exponential_backoff(attempt))
                 else: return []
         return []
+
+    async def batch_get_references_by_papers(self, paper_id, limit=100):
+        """
+        批量获取论文的参考文献，使用更高效的方式
+        
+        Args:
+            paper_id: 论文的SemanticScholar ID
+            limit: 最大获取的参考文献数量
+            
+        Returns:
+            包含参考文献详细信息的列表
+        """
+        from slais.utils.logging_utils import logger
+        
+        # 步骤1: 首先获取参考文献列表
+        logger.info(f"步骤1: 获取论文 {paper_id} 的参考文献列表")
+        references_dois = await self.get_references_by_paper_id(paper_id, limit=limit)
+        if not references_dois:
+            return []
+            
+        logger.info(f"找到 {len(references_dois)} 个参考文献DOI")
+        
+        # 步骤2: 批量获取DOI详细信息
+        logger.info(f"步骤2: 批量获取参考文献详细信息")
+        
+        # 准备批量获取
+        batch_size = 20  # 每批处理的引用数量
+        all_references = []
+        total_batches = (len(references_dois) + batch_size - 1) // batch_size
+        
+        for i in range(0, len(references_dois), batch_size):
+            batch = references_dois[i:i+batch_size]
+            batch_num = i // batch_size + 1
+            
+            logger.info(f"正在获取批次 {batch_num}/{total_batches} ({len(batch)}个DOI)...")
+            
+            # 构造批量请求
+            batch_results = []
+            for doi in batch:
+                try:
+                    result = await self.get_paper_details_by_doi(doi)
+                    if result:
+                        # 获取PMID和PMCID (如果存在)
+                        pmid = result.get("externalIds", {}).get("PubMed", "")
+                        pmcid = result.get("externalIds", {}).get("PMC", "")
+                        
+                        # 确保字段一致性，与相关文章格式保持一致
+                        formatted_result = {
+                            "pmid": pmid,
+                            "title": result.get("title", ""),
+                            "journal": result.get("venue", ""),
+                            "pub_date": str(result.get("year", "")),
+                            "abstract": result.get("abstract", ""),
+                            "doi": doi,
+                        }
+                        
+                        # 只有在pmid存在时才添加pmid_link
+                        if pmid:
+                            formatted_result["pmid_link"] = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                        else:
+                            formatted_result["pmid_link"] = ""
+                        
+                        # 只有在pmcid存在时才添加pmcid_link
+                        if pmcid:
+                            formatted_result["pmcid"] = pmcid
+                            formatted_result["pmcid_link"] = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
+                        else:
+                            formatted_result["pmcid"] = ""
+                            formatted_result["pmcid_link"] = ""
+                        
+                        # 处理作者
+                        if "authors" in result and isinstance(result["authors"], list):
+                            author_names = [author.get("name", "") for author in result["authors"] if isinstance(author, dict) and "name" in author]
+                            formatted_result["authors"] = "; ".join(author_names)
+                        else:
+                            formatted_result["authors"] = ""
+                            
+                        batch_results.append(formatted_result)
+                except Exception as e:
+                    logger.warning(f"获取DOI {doi}详情失败: {str(e)}")
+                    continue
+            
+            # 添加到结果列表
+            all_references.extend(batch_results)
+            logger.info(f"批次 {batch_num} 成功获取 {len(batch_results)}/{len(batch)} 条参考文献")
+            
+            # 避免API限制，批次间短暂暂停
+            if i + batch_size < len(references_dois):
+                await asyncio.sleep(0.5)
+        
+        logger.info(f"成功获取 {len(all_references)}/{len(references_dois)} 条参考文献详情")
+        return all_references

@@ -1,0 +1,102 @@
+2025-05-11 18:50:31,578 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250511_185030.log
+2025-05-11 18:50:31,579 - slais_app - INFO - SLAIS应用程序启动
+2025-05-11 18:50:31,580 - slais_app - INFO - 正在处理PDF文件: pdfs/darwin.pdf
+2025-05-11 18:50:31,645 - slais_app - INFO - 使用DashScope兼容模式和模型: qwen-turbo
+2025-05-11 18:50:34,006 - slais_app - INFO - 开始解析PDF文件: pdfs/darwin.pdf
+2025-05-11 18:50:34,007 - slais_app - INFO - 创建Markdown输出目录：output\darwin\darwin_markdown
+2025-05-11 18:50:34,008 - slais_app - INFO - 图片目录已准备好：output\darwin\darwin_markdown\images
+2025-05-11 18:50:34,010 - slais_app - INFO - PDF内容已读取
+2025-05-11 18:50:35,743 - slais_app - INFO - 使用文本模式处理PDF
+2025-05-11 18:51:05,746 - slais_app - INFO - PDF处理完成
+2025-05-11 18:51:06,366 - slais_app - INFO - 模型结果已绘制
+2025-05-11 18:51:06,708 - slais_app - INFO - 布局结果已绘制
+2025-05-11 18:51:09,717 - slais_app - INFO - 跨度结果已绘制
+2025-05-11 18:51:09,755 - slais_app - INFO - 内容列表分析: 共 37 个内容块
+2025-05-11 18:51:09,756 - slais_app - INFO - 找到 3 个图像块
+2025-05-11 18:51:09,756 - slais_app - INFO - 开始重命名图片并更新Markdown内容中的图片链接...
+2025-05-11 18:51:09,759 - slais_app - INFO - 在图像目录 'output\darwin\darwin_markdown\images' 中找到 3 个图像文件
+2025-05-11 18:51:09,759 - slais_app - INFO - 图片已重命名: '68c07b0f9a7992acd49d5ce1bac09af921781cb69898df61fc191c2120da4d6b.jpg' -> 'image_000.jpg'
+2025-05-11 18:51:09,760 - slais_app - INFO - Markdown中的图片链接已更新: 'images/68c07b0f9a7992acd49d5ce1bac09af921781cb69898df61fc191c2120da4d6b.jpg' -> 'images/image_000.jpg'
+2025-05-11 18:51:09,761 - slais_app - INFO - 图片已重命名: '8f8884210c0b46b7db1b53e6603fd97f88ba11e094d0f32a5182e9e228559e87.jpg' -> 'image_001.jpg'
+2025-05-11 18:51:09,762 - slais_app - INFO - Markdown中的图片链接已更新: 'images/8f8884210c0b46b7db1b53e6603fd97f88ba11e094d0f32a5182e9e228559e87.jpg' -> 'images/image_001.jpg'
+2025-05-11 18:51:09,765 - slais_app - INFO - 图片已重命名: 'd7df5ad620ff7ff5eada0bb492b5ace6ba85c4917241fa038d7ac2e2a2fa1a48.jpg' -> 'image_002.jpg'
+2025-05-11 18:51:09,765 - slais_app - INFO - Markdown中的图片链接已更新: 'images/d7df5ad620ff7ff5eada0bb492b5ace6ba85c4917241fa038d7ac2e2a2fa1a48.jpg' -> 'images/image_002.jpg'
+2025-05-11 18:51:09,766 - slais_app - INFO - 图片重命名和Markdown链接更新完成。共处理 3 张图片。
+2025-05-11 18:51:09,767 - slais_app - INFO - 更新后的Markdown文件已保存：output\darwin\darwin_markdown\darwin.md
+2025-05-11 18:51:09,820 - slais_app - INFO - 内容列表已保存
+2025-05-11 18:51:09,914 - slais_app - INFO - 中间JSON文件已保存
+2025-05-11 18:51:09,918 - slais_app - INFO - PDF解析完成，内容长度: 23707 字符
+2025-05-11 18:51:09,920 - slais_app - INFO - 已将PDF转换为Markdown并保存到: output\darwin\darwin_markdown_20250511_185109.md
+2025-05-11 18:51:10,602 - slais_app - INFO - [S2] 成功获取DOI 10.1126/science.aao4593 的信息 (PaperID: 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1)。
+2025-05-11 18:51:10,603 - slais_app - INFO - 正在通过 PMID: 29170277 获取 PubMed 文章详情 (使用邮箱: your@gmail.com)
+2025-05-11 18:51:12,264 - slais_app - INFO - 成功获取并解析 PMID: 29170277 的文章信息
+2025-05-11 18:51:12,266 - slais_app - INFO - 开始获取PMID 29170277的相关文献...
+2025-05-11 18:51:12,267 - slais_app - INFO - 开始为 PMID: 29170277 查找最近 10 年内的相关文章 (使用邮箱: your@gmail.com)
+2025-05-11 18:51:12,267 - slais_app - INFO - 步骤 1: 正在为 PMID 29170277 查找相关文章 (elink + history)
+2025-05-11 18:51:13,956 - slais_app - INFO - 找到相关文章的历史记录 (elink): WebEnv=MCID_68208122730ba7f6c403bbe3, QueryKey=1
+2025-05-11 18:51:13,956 - slais_app - INFO - 步骤 2: 使用 esearch 过滤相关文章 (最近 10 年)
+2025-05-11 18:51:15,490 - slais_app - INFO - 在最近 10 年内找到 79 篇相关文章。过滤后的历史记录: WebEnv=MCID_68208122730ba7f6c403bbe3, QueryKey=2
+2025-05-11 18:51:15,490 - slais_app - INFO - 将分 1 批次获取 79 篇相关文章的详细信息 (每批最多 200 篇)。
+2025-05-11 18:51:16,168 - slais_app - INFO - 正在获取批次 1/1 (PMID 索引 1 到 79)...
+2025-05-11 18:51:18,356 - slais_app - INFO - 正在解析批次 1 中获取到的 79 篇文章的详细信息。
+2025-05-11 18:51:18,361 - slais_app - INFO - 成功检索并解析了 79/79 篇相关文章的详细信息。
+2025-05-11 18:51:18,365 - slais_app - INFO - 成功获取到 79 篇相关文献
+2025-05-11 18:51:18,365 - slais_app - INFO - 开始获取Semantic Scholar论文ID 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1的参考文献...
+2025-05-11 18:51:18,365 - slais_app - INFO - 步骤1: 获取论文 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1 的参考文献列表
+2025-05-11 18:51:18,925 - slais_app - INFO - [S2] PaperID 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1: 成功获取 34 条参考文献DOI (来自第一页)。
+2025-05-11 18:51:18,926 - slais_app - INFO - 找到 34 个参考文献DOI
+2025-05-11 18:51:18,926 - slais_app - INFO - 步骤2: 批量获取参考文献详细信息
+2025-05-11 18:51:18,927 - slais_app - INFO - 正在获取批次 1/2 (20个DOI)...
+2025-05-11 18:51:19,489 - slais_app - INFO - [S2] 成功获取DOI 10.1098/rstb.2016.0146 的信息 (PaperID: 7fca1c290c6f1223a5007a31a0f5429c8eee5dd8)。
+2025-05-11 18:51:20,017 - slais_app - INFO - [S2] 成功获取DOI 10.1111/1755-0998.12665 的信息 (PaperID: fc0db40d47bb20dd26495f5d3b581c50325d7e55)。
+2025-05-11 18:51:20,564 - slais_app - INFO - [S2] 成功获取DOI 10.1111/mec.13685 的信息 (PaperID: af74783c16b225d7082dba4e1f5c971b09549954)。
+2025-05-11 18:51:21,141 - slais_app - INFO - [S2] 成功获取DOI 10.1126/science.aad8786 的信息 (PaperID: d7c20041cdee4f1250acdc51a47242276aea5cb6)。
+2025-05-11 18:51:21,677 - slais_app - INFO - [S2] 成功获取DOI 10.1073/pnas.1505357112 的信息 (PaperID: d68a39aac052e30361e38b19aa1adc7e0ab9ab0e)。
+2025-05-11 18:51:22,195 - slais_app - INFO - [S2] 成功获取DOI 10.1038/nature14181 的信息 (PaperID: 8bc940e0734ff21da9ddee5fc9ae590744d5bade)。
+2025-05-11 18:51:22,711 - slais_app - INFO - [S2] 成功获取DOI 10.3732/ajb.1400201 的信息 (PaperID: 574d105d675adf245f18cf13706b7f22e199c363)。
+2025-05-11 18:51:23,266 - slais_app - INFO - [S2] 成功获取DOI 10.1111/evo.12399 的信息 (PaperID: 49e84f8845192e7c2cae2a65ac1a1c0a898f6a0a)。
+2025-05-11 18:51:23,791 - slais_app - INFO - [S2] 成功获取DOI 10.2307/j.ctt5hhncc 的信息 (PaperID: 504b1d0d652e05588e9d282049a282a95a54dfa7)。
+2025-05-11 18:51:24,345 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1365-294X.2011.05183.x 的信息 (PaperID: cc6df00cbc42e076d27d08a6ee384a29a905e438)。
+2025-05-11 18:51:24,866 - slais_app - INFO - [S2] 成功获取DOI 10.1007/s11692-011-9126-7 的信息 (PaperID: c3202cc806616648574c9ddcea7d3c9428d70144)。
+2025-05-11 18:51:25,395 - slais_app - INFO - [S2] 成功获取DOI 10.1002/TAX.595005 的信息 (PaperID: 40e8a0839671c465079044505f459557164bace8)。
+2025-05-11 18:51:25,917 - slais_app - INFO - [S2] 成功获取DOI 10.1073/pnas.1000133107 的信息 (PaperID: 24299afede0f608b179aba4fa4d63a4a7ec714f9)。
+2025-05-11 18:51:26,431 - slais_app - INFO - [S2] 成功获取DOI 10.1098/rstb.2009.0283 的信息 (PaperID: ecb5e9c4c0beba5ec4bc8274496de580538701de)。
+2025-05-11 18:51:26,943 - slais_app - INFO - [S2] 成功获取DOI 10.1371/journal.pone.0009490 的信息 (PaperID: d5677974ad0a645fbb71a6dc0355c54005239882)。
+2025-05-11 18:51:27,497 - slais_app - INFO - [S2] 成功获取DOI 10.1016/j.tig.2009.12.001 的信息 (PaperID: 51f1bdafa976dfd33d12c2bd753421d5ecc00375)。
+2025-05-11 18:51:28,013 - slais_app - INFO - [S2] 成功获取DOI 10.1073/PNAS.0911761106 的信息 (PaperID: ba559c8b57bbd2e3c320a32780ee4c7ef7a56141)。
+2025-05-11 18:51:28,519 - slais_app - INFO - [S2] 成功获取DOI 10.1101/gr.094052.109 的信息 (PaperID: 20f6dda28b380eabb9c7bbb94063437dc735c63b)。
+2025-05-11 18:51:29,058 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1558-5646.2008.00599.x 的信息 (PaperID: 55a1b60959efb4caf07ab90f9b353ddbd264bc55)。
+2025-05-11 18:51:29,615 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1365-294X.2008.03898.x 的信息 (PaperID: fab61fee89149dc04cb572f1dd6a708f11cb079a)。
+2025-05-11 18:51:29,617 - slais_app - INFO - 批次 1 成功获取 20/20 条参考文献
+2025-05-11 18:51:30,119 - slais_app - INFO - 正在获取批次 2/2 (14个DOI)...
+2025-05-11 18:51:30,685 - slais_app - INFO - [S2] 成功获取DOI 10.1525/auk.2008.41008.3 的信息 (PaperID: 9ffd7faed9326b7bd5a28d6a60299086126d3e45)。
+2025-05-11 18:51:31,204 - slais_app - INFO - [S2] 成功获取DOI 10.1086/519795 的信息 (PaperID: dbc447956c16e27cfb030e40552359d3c79bc690)。
+2025-05-11 18:51:31,725 - slais_app - INFO - [S2] 成功获取DOI 10.1038/nature04738 的信息 (PaperID: 6ddd5a7245e73d47a71b8c08cf715d8a4f123f07)。
+2025-05-11 18:51:32,287 - slais_app - INFO - [S2] 成功获取DOI 10.1038/nature03800 的信息 (PaperID: 652b159338ca0ff3b5d9fd234bc464d20202f6b7)。
+2025-05-11 18:51:32,831 - slais_app - INFO - [S2] 成功获取DOI 10.1093/JHERED/ESI026 的信息 (PaperID: 89cf7a57a1e7f60d6711e7b314dcf79afbbe6246)。
+2025-05-11 18:51:33,348 - slais_app - INFO - [S2] 成功获取DOI 10.1046/J.1095-8312.2002.00076.X 的信息 (PaperID: 6179b910cbbaff0c3e92330e582c2d95866ced38)。
+2025-05-11 18:51:33,865 - slais_app - INFO - [S2] 成功获取DOI 10.1046/j.1365-2540.2001.00900.x 的信息 (PaperID: b0eebc1f9f083098ff22d9db65803e3fd684783c)。
+2025-05-11 18:51:34,418 - slais_app - INFO - [S2] 成功获取DOI 10.1038/sj.hdy.6886170 的信息 (PaperID: 605a6133bf51f82ea2fad0c31df1c01e8b65cb27)。
+2025-05-11 18:51:34,971 - slais_app - INFO - [S2] 成功获取DOI 10.1007/s100219900049 的信息 (PaperID: 86870ac23c84ec73d1842aed174059b5eaf1f3b3)。
+2025-05-11 18:52:03,759 - slais_app - INFO - [S2] 成功获取DOI 10.1038/375313A0 的信息 (PaperID: c64fe56b3dc35d6a6c0b351566f4ed6021d7276e)。
+2025-05-11 18:52:04,328 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1558-5646.1994.tb01313.x 的信息 (PaperID: aa4a5054260df262d72eed84f35202427fd45da3)。
+2025-05-11 18:52:04,850 - slais_app - INFO - [S2] 成功获取DOI 10.1016/S0003-3472(83)80021-9 的信息 (PaperID: 1b7efce9bae2ac746a25bac526daa588354a8995)。
+2025-05-11 18:52:05,366 - slais_app - INFO - [S2] 成功获取DOI 10.1098/rspb.1981.0046 的信息 (PaperID: 0870edcc09f4e6a5c80afe2791f18db1a1e4bd11)。
+2025-05-11 18:52:05,912 - slais_app - INFO - [S2] 成功获取DOI 10.1016/j.tree.2011.09.002 的信息 (PaperID: 96828a7be5abda447e80746a7e15879c1d980092)。
+2025-05-11 18:52:05,913 - slais_app - INFO - 批次 2 成功获取 14/14 条参考文献
+2025-05-11 18:52:05,913 - slais_app - INFO - 成功获取 34/34 条参考文献详情
+2025-05-11 18:52:05,913 - slais_app - INFO - 成功获取 34 篇参考文献
+2025-05-11 18:52:05,914 - slais_app - INFO - 数据收集完成: 原始文章信息已获取，找到 79 篇相关文献和 34 篇参考文献
+2025-05-11 18:52:05,914 - slais_app - INFO - 开始分析文献方法...
+2025-05-11 18:52:10,003 - slais_app - INFO - 方法分析结果: {'方法类型': '实验', '关键技术': ['基因组测序', '微卫星标记分析', '全基因组单核苷酸多态性（SNP）分析', '最大似然法构建系统发育树', '表型测量与统计分析（如ANOVA、ANCOVA等）'], '创新方法': ['直接观察并记录从杂交起源到生殖隔离形成的全过程', '结合生态学和基因组学数据，追踪杂交种群的遗传变化和适应性演化', '利用分子标记确认杂交种群的亲本来源及杂交事件的真实性', '通过基因组分析揭示杂交种群中关键基因（如ALX1）对表型变异的影响', '结合形态学和行为学特征（如喙形和鸣叫模式）探讨杂交种群的生态成功和生殖隔离机制']}
+2025-05-11 18:52:10,004 - slais_app - INFO - 开始提取创新点...
+2025-05-11 18:52:15,510 - slais_app - INFO - 创新点提取结果: {'核心创新': ['首次直接记录了达尔文雀中同源杂交物种形成的全过程，从起源到生殖隔离的建立。', '通过基因组测序确认了外来雄性个体的来源，证明其为来自100公里外Española岛的大仙人掌雀。', '展示了生殖隔离通常需要数百代才能形成的情况下，仅用三代就建立了完全的生殖隔离。', '揭示了杂交后代在极端近亲繁殖下仍保持高适应性和生存率，并表现出表型的超显性分离（transgressive segregation）。', '发现ALX1和HMGA2基因对喙形有显著影响，并且这些基因可能因自然选择而频率发生变化。', '通过形态学分析表明，杂交后代在体型上介于双亲之间，但在喙深等特征上表现出超越双亲范围的极端表现型。'], '潜在应用': ['为研究快速进化和物种形成提供了一个模型系统。', '有助于理解基因流动如何促进或阻碍新物种的形成。', '可以用于开发保护濒危物种的新策略，特别是那些面临栖息地丧失或气候变化威胁的物种。', '为农业育种提供了灵感，例如利用杂交技术创造具有理想性状的新品种。', '加深了对表观遗传学和基因调控网络在快速适应中的作用的理解。']}
+2025-05-11 18:52:15,514 - slais_app - INFO - 开始生成问答...
+2025-05-11 18:52:36,960 - slais_app - INFO - 问答生成结果: {'question1': 'What is hybrid speciation?', 'answer1': 'Hybrid speciation is the process where interbreeding of two species may result in the formation of a new species, reproductively isolated from the parental species.', 'question2': 'What is homoploid hybrid speciation?', 'answer2': 'Homoploid hybrid speciation is hybrid speciation without chromosomal doubling.', 'question3': "Where did the immigrant Darwin's finch originate?", 'answer3': "The immigrant Darwin's finch originated on Española, which is more than 100 kilometers from Daphne Major.", 'question4': 'How many generations did it take for the new lineage to show reproductive isolation?', 'answer4': 'Reproductive isolation was established in only three generations.', 'question5': 'What is the name given to the new lineage?', 'answer5': 'The new lineage is referred to as the Big Bird lineage.', 'question6': 'What is the significance of the Big Bird lineage?', 'answer6': 'The Big Bird lineage provides a directly documented example of homoploid hybrid speciation in animals from its origin to reproductive isolation.', 'question7': 'What are the two parental species involved in the hybridization?', 'answer7': 'The two parental species involved are Geospiza conirostris and Geospiza fortis.', 'question8': 'What is the role of the ALX1 locus in the Big Bird lineage?', 'answer8': 'The ALX1 locus is associated with bill shape and shows a strong association with the bill shape of the Big Bird lineage.', 'question9': 'What is transgressive segregation?', 'answer9': 'Transgressive segregation is the production of progeny with extreme phenotypes beyond the range of those of the parents, often caused by epistasis or combining complementary alleles at different loci.', 'question10': 'What is the significance of the increase in bill size across generations?', 'answer10': 'The increase in bill size across generations suggests that natural selection played a significant role in the evolution of the Big Bird lineage.', 'question11': 'What is the inbreeding coefficient of the founder male?', 'answer11': 'The inbreeding coefficient of the founder male is 0.19.', 'question12': 'How does the Big Bird lineage compare to the parental species in terms of body size?', 'answer12': 'Members of the Big Bird lineage are intermediate in body size between the means of the parental species.', 'question13': 'What is the significance of the distinctive song of the Big Bird lineage?', 'answer13': 'The distinctive song of the Big Bird lineage contributes to its ecological success and reproductive isolation.', 'question14': 'What is the geographical distance between Española and Daphne Major?', 'answer14': 'The geographical distance between Española and Daphne Major is more than 100 kilometers.', 'question15': 'What is the role of the HMGA2 locus in the Big Bird lineage?', 'answer15': 'The HMGA2 locus has a large effect on bill dimensions, which are polygenic traits.', 'question16': 'What is the coefficient of variation for bill length in the Big Bird lineage?', 'answer16': 'The coefficient of variation for bill length in the Big Bird lineage is 3.82 ± 0.42.', 'question17': 'What is the significance of the increase in homozygosity over generations?', 'answer17': 'The increase in homozygosity over generations is consistent with genetic drift due to the small number of breeding pairs.', 'question18': 'What is the average genome-wide homozygosity of the founder male?', 'answer18': 'The average genome-wide homozygosity of the founder male is 0.19.', 'question19': 'What is the significance of the distinctive bill morphology of the Big Bird lineage?', 'answer19': 'The distinctive bill morphology of the Big Bird lineage contributes to its ecological success and reproductive isolation.', 'question20': 'What is the significance of the distinctive song of the Big Bird lineage?', 'answer20': 'The distinctive song of the Big Bird lineage helps in maintaining reproductive isolation.', 'question21': 'What is the significance of the increase in bill depth across generations?', 'answer21': 'The increase in bill depth across generations suggests that natural selection favored larger bills.', 'question22': 'What is the significance of the ALX1 locus in the Big Bird lineage?', 'answer22': 'The ALX1 locus is associated with bill shape and shows a strong association with the bill shape of the Big Bird lineage.', 'question23': 'What is the significance of the HMGA2 locus in the Big Bird lineage?', 'answer23': 'The HMGA2 locus has a large effect on bill dimensions, which are polygenic traits.', 'question24': 'What is the significance of the distinctive bill morphology of the Big Bird lineage?', 'answer24': 'The distinctive bill morphology of the Big Bird lineage contributes to its ecological success and reproductive isolation.', 'question25': 'What is the significance of the distinctive song of the Big Bird lineage?', 'answer25': 'The distinctive song of the Big Bird lineage helps in maintaining reproductive isolation.', 'question26': 'What is the significance of the increase in bill depth across generations?', 'answer26': 'The increase in bill depth across generations suggests that natural selection favored larger bills.', 'question27': 'What is the significance of the ALX1 locus in the Big Bird lineage?', 'answer27': 'The ALX1 locus is associated with bill shape and shows a strong association with the bill shape of the Big Bird lineage.', 'question28': 'What is the significance of the HMGA2 locus in the Big Bird lineage?', 'answer28': 'The HMGA2 locus has a large effect on bill dimensions, which are polygenic traits.', 'question29': 'What is the significance of the distinctive bill morphology of the Big Bird lineage?', 'answer29': 'The distinctive bill morphology of the Big Bird lineage contributes to its ecological success and reproductive isolation.', 'question30': 'What is the significance of the distinctive song of the Big Bird lineage?', 'answer30': 'The distinctive song of the Big Bird lineage helps in maintaining reproductive isolation.'}
+2025-05-11 18:52:36,965 - slais_app - INFO - 处理完成！
+2025-05-11 18:52:36,968 - slais_app - INFO - 已将分析结果保存到JSON文件: output\darwin\darwin_analysis_20250511_185236.json
+2025-05-11 18:52:36,968 - slais_app - INFO - 已将分析报告保存到Markdown文件: output\darwin\darwin_report_20250511_185236.md
+2025-05-11 18:52:36,972 - slais_app - INFO - 已将 79 篇文章导出到 output\darwin\darwin_related_articles_20250511_185236.csv
+2025-05-11 18:52:36,973 - slais_app - INFO - 已将 79 篇相关文献保存到CSV文件: output\darwin\darwin_related_articles_20250511_185236.csv
+2025-05-11 18:52:36,974 - slais_app - INFO - 已将 34 篇文章导出到 output\darwin\darwin_reference_articles_20250511_185236.csv
+2025-05-11 18:52:36,975 - slais_app - INFO - 已将 34 篇参考文献保存到CSV文件: output\darwin\darwin_reference_articles_20250511_185236.csv

@@ -1,0 +1,198 @@
+{
+  "metadata": {
+    "pdf_file": "pdfs/darwin.pdf",
+    "doi": "10.1126/science.aao4593",
+    "timestamp": "20250511_194734"
+  },
+  "original_article": {
+    "s2_info": {
+      "paperId": "7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1",
+      "externalIds": {
+        "MAG": "2770923940",
+        "DOI": "10.1126/science.aao4593",
+        "CorpusId": 206663426,
+        "PubMed": "29170277"
+      },
+      "url": "https://www.semanticscholar.org/paper/7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1",
+      "title": "Rapid hybrid speciation in Darwin’s finches",
+      "abstract": null,
+      "venue": "Science",
+      "year": 2018,
+      "referenceCount": 39,
+      "citationCount": 249,
+      "influentialCitationCount": 5,
+      "isOpenAccess": true,
+      "openAccessPdf": {
+        "url": "https://science.sciencemag.org/content/sci/359/6372/224.full.pdf",
+        "status": "BRONZE",
+        "license": null,
+        "disclaimer": "Notice: This paper's abstract has been elided by the publisher. Paper or abstract available at https://api.unpaywall.org/v2/10.1126/science.aao4593?email=<INSERT_YOUR_EMAIL> or https://doi.org/10.1126/science.aao4593, which is subject to the license by the author or copyright owner provided with this content. Please go to the source to verify the license and copyright information for your use."
+      },
+      "fieldsOfStudy": [
+        "Medicine",
+        "Biology"
+      ],
+      "publicationTypes": [
+        "JournalArticle"
+      ],
+      "authors": [
+        {
+          "authorId": "5113990",
+          "url": "https://www.semanticscholar.org/author/5113990",
+          "name": "Sangeet Lamichhaney"
+        },
+        {
+          "authorId": "2115956",
+          "url": "https://www.semanticscholar.org/author/2115956",
+          "name": "Fan Han"
+        },
+        {
+          "authorId": "7768135",
+          "url": "https://www.semanticscholar.org/author/7768135",
+          "name": "M. Webster"
+        },
+        {
+          "authorId": "2200540864",
+          "url": "https://www.semanticscholar.org/author/2200540864",
+          "name": "Leif Andersson"
+        },
+        {
+          "authorId": "2200540864",
+          "url": "https://www.semanticscholar.org/author/2200540864",
+          "name": "Leif Andersson"
+        },
+        {
+          "authorId": "2200540864",
+          "url": "https://www.semanticscholar.org/author/2200540864",
+          "name": "Leif Andersson"
+        },
+        {
+          "authorId": "2467433",
+          "url": "https://www.semanticscholar.org/author/2467433",
+          "name": "B. Grant"
+        },
+        {
+          "authorId": "5730210",
+          "url": "https://www.semanticscholar.org/author/5730210",
+          "name": "P. Grant"
+        }
+      ]
+    },
+    "pubmed_info": {
+      "title": "Rapid hybrid speciation in Darwin's finches.",
+      "authors": [
+        "Sangeet Lamichhaney",
+        "Fan Han",
+        "Matthew T Webster",
+        "Leif Andersson",
+        "B Rosemary Grant",
+        "Peter R Grant"
+      ],
+      "journal": "Science",
+      "publication_date": "2018-01-12",
+      "pmid": "29170277",
+      "pmid_link": "https://pubmed.ncbi.nlm.nih.gov/29170277/",
+      "pmcid": null,
+      "pmcid_link": null,
+      "abstract": "Homoploid hybrid speciation in animals has been inferred frequently from patterns of variation, but few examples have withstood critical scrutiny. Here we report a directly documented example, from its origin to reproductive isolation. An immigrant Darwin's finch to Daphne Major in the Galápagos archipelago initiated a new genetic lineage by breeding with a resident finch (Geospiza fortis). Genome sequencing of the immigrant identified it as a G. conirostris male that originated on Española >100 kilometers from Daphne Major. From the second generation onward, the lineage bred endogamously and, despite intense inbreeding, was ecologically successful and showed transgressive segregation of bill morphology. This example shows that reproductive isolation, which typically develops over hundreds of generations, can be established in only three."
+    }
+  },
+  "related_articles_count": 79,
+  "reference_articles_count": 34,
+  "analysis_results": {
+    "methodology": {
+      "方法类型": "实验",
+      "关键技术": [
+        "基因组测序",
+        "微卫星标记分析",
+        "全基因组单核苷酸多态性（SNP）分析",
+        "最大似然法构建系统发育树",
+        "表型测量与统计分析（如ANOVA、ANCOVA等）"
+      ],
+      "创新方法": [
+        "直接观察和记录杂交物种从起源到生殖隔离的全过程",
+        "结合生态学和基因组学的方法研究快速杂交物种形成",
+        "利用基因组数据确认杂交起源并追踪遗传变化",
+        "通过表型和基因型关联分析揭示关键基因位点对表型的影响"
+      ]
+    },
+    "innovations": {
+      "核心创新": [
+        "首次直接记录了达尔文雀中同源杂交物种形成的全过程，从起源到生殖隔离的建立。",
+        "通过基因组测序确认了外来雄性达尔文雀的来源，证明其为来自100公里外Española岛的大仙人掌雀。",
+        "展示了生殖隔离通常需要数百代才能形成的情况下，仅用三代就建立了新的独立物种。",
+        "揭示了杂交后代尽管经历近亲繁殖，但表现出显著的生态成功和表型变异（如喙形态的极端分离）。",
+        "通过全基因组测序和形态学分析，确定了杂交种成功的关键遗传因素，包括ALX1和HMGA2基因位点对喙尺寸的影响。"
+      ],
+      "潜在应用": [
+        "为研究快速进化和物种形成提供了一个模型系统。",
+        "有助于理解杂交在促进新物种形成中的作用，特别是在面临环境压力时。",
+        "为保护生物学提供启示，例如如何利用杂交来增强濒危物种的适应能力。",
+        "为农业和园艺领域的人工杂交育种提供理论支持。",
+        "启发生态学研究中关于基因流、遗传多样性和适应性进化的进一步探索。"
+      ]
+    },
+    "qa_pairs": {
+      "question1": "What is hybrid speciation?",
+      "answer1": "Hybrid speciation is the process where interbreeding of two species may result in the formation of a new species, reproductively isolated from the parental species.",
+      "question2": "What is homoploid hybrid speciation?",
+      "answer2": "Homoploid hybrid speciation is hybrid speciation without chromosomal doubling.",
+      "question3": "Where did the immigrant Darwin's finch originate from?",
+      "answer3": "The immigrant Darwin's finch originated from Española, which is more than 100 kilometers from Daphne Major.",
+      "question4": "How many generations did it take for the new lineage to show reproductive isolation?",
+      "answer4": "Reproductive isolation was established in only three generations.",
+      "question5": "What is the name given to the new lineage of finches?",
+      "answer5": "The new lineage is referred to as the Big Bird lineage due to its large bill size.",
+      "question6": "What evidence suggests that the Big Bird lineage is ecologically successful?",
+      "answer6": "Despite intense inbreeding, members of the Big Bird lineage experienced high fitness, as judged by their reproductive output and high survival rates.",
+      "question7": "What role does bill morphology play in the success of the Big Bird lineage?",
+      "answer7": "Bill morphology is likely a key factor in the success of the Big Bird lineage, allowing them to efficiently exploit large woody fruits during dry seasons and droughts.",
+      "question8": "What is the significance of the song of the Big Bird lineage?",
+      "answer8": "The distinctive song of the Big Bird lineage helps them discriminate between members of their own and other species.",
+      "question9": "What is the genetic basis of the founder population of the Big Bird lineage?",
+      "answer9": "The founder male was identified as a G. conirostris, and genome sequencing helped establish the genetic basis of the founder population and characteristics associated with its success.",
+      "question10": "How was the founder male originally misidentified?",
+      "answer10": "The founder male was initially hypothesized to be a G. fortis × G. scandens hybrid, but phylogenetic analysis showed he was actually a G. conirostris.",
+      "question11": "Why is the immigration of the founder male from Española notable?",
+      "answer11": "Immigration from Española is notable because it is located more than 100 kilometers from Daphne Major, and a large island (Santa Cruz) lies between them.",
+      "question12": "What is the inbreeding coefficient of the founder male?",
+      "answer12": "The inbreeding coefficient of the founder male was 0.19.",
+      "question13": "How did the inbreeding coefficient change in the F1 generation?",
+      "answer13": "The inbreeding coefficient was negative in the F1 generation due to interspecies hybridization.",
+      "question14": "What happened to the homozygosity levels over the generations?",
+      "answer14": "Homozygosity levels gradually increased over the next five generations due to genetic drift caused by the small number of breeding pairs.",
+      "question15": "What is the genome-wide average nucleotide diversity π?",
+      "answer15": "The genome-wide average nucleotide diversity π declined from 0.17% in generation 1 to ~0.13% in generations 4 to 6.",
+      "question16": "What is the ecological success of the Big Bird lineage attributed to?",
+      "answer16": "The ecological success of the Big Bird lineage is attributed to large bill and body size and a distinctive song.",
+      "question17": "How does the bill size of the Big Bird lineage compare to its parental species?",
+      "answer17": "The bill size of the Big Bird lineage is larger than both parental species, with an average of 60.8% larger in generations 4 to 6.",
+      "question18": "What is the significance of the ALX1 locus in the Big Bird lineage?",
+      "answer18": "The ALX1 locus is significant because it is associated with bill morphology and shows an allelic series with different effects on bill shape.",
+      "question19": "What is transgressive segregation?",
+      "answer19": "Transgressive segregation is the production of progeny with extreme phenotypes beyond the range of those of the parents, likely caused by epistasis or combining complementary alleles at different loci.",
+      "question20": "What is the trend in bill size across generations?",
+      "answer20": "There is a trend of increasing bill size across generations, which is more indicative of selection than drift.",
+      "question21": "What is the most important component of bill size?",
+      "answer21": "The most important component of bill size is bill depth.",
+      "question22": "Is there any evidence of selection on bill depth?",
+      "answer22": "Yes, there is evidence of selection on bill depth, as the mean bill depth increased significantly over generations.",
+      "question23": "How does body size change across generations?",
+      "answer23": "Body size remains unchanged across generations.",
+      "question24": "What does the morphological analysis suggest about the position of the Big Bird lineage?",
+      "answer24": "The morphological analysis suggests that the Big Bird lineage occupies unoccupied morphological space among coexisting ecological competitors.",
+      "question25": "What is the significance of the HMGA2 gene?",
+      "answer25": "HMGA2 has a large effect on bill dimensions, which are polygenic traits influenced by other gene variants.",
+      "question26": "What is the role of epistasis in the Big Bird lineage?",
+      "answer26": "Epistasis is likely responsible for the transgressive segregation observed in the Big Bird lineage.",
+      "question27": "What is the significance of the distinctive song of the Big Bird lineage?",
+      "answer27": "The distinctive song helps the Big Bird lineage discriminate between members of their own and other species.",
+      "question28": "What is the significance of the ALX1 locus in Darwin's finches?",
+      "answer28": "The ALX1 locus in Darwin's finches involves an allelic series with different effects on bill morphology.",
+      "question29": "What is the significance of the increase in bill depth?",
+      "answer29": "The increase in bill depth is significant because it is independent of body size and suggests directional selection.",
+      "question30": "What is the overall conclusion of the study?",
+      "answer30": "The study provides direct documentation of homoploid hybrid speciation in Darwin's finches, from its origin to reproductive isolation."
+    }
+  }
+}
