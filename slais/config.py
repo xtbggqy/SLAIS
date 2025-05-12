@@ -2,7 +2,9 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, List, Dict
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import datetime
 
 # 保存原始系统路径
@@ -92,6 +94,11 @@ PUBMED_REQUEST_TIMEOUT = float(clean_env_var(os.getenv("PUBMED_REQUEST_TIMEOUT",
 PUBMED_REQUEST_DELAY = float(clean_env_var(os.getenv("PUBMED_REQUEST_DELAY", "0.35")))
 PUBMED_RETRY_COUNT = int(clean_env_var(os.getenv("PUBMED_RETRY_COUNT", "3")))
 
+# 确保NCBI相关配置正确加载
+NCBI_EMAIL = os.getenv("NCBI_EMAIL", "example@example.com")
+RELATED_ARTICLES_MAX = int(os.getenv("RELATED_ARTICLES_MAX", "30"))
+RELATED_ARTICLES_YEARS_BACK = int(os.getenv("RELATED_ARTICLES_YEARS_BACK", "10"))
+
 # Semantic Scholar API 配置
 SEMANTIC_SCHOLAR_API_KEY = clean_env_var(os.getenv("SEMANTIC_SCHOLAR_API_KEY"))  # 允许为None
 SEMANTIC_SCHOLAR_API_BASE_URL = clean_env_var(os.getenv("SEMANTIC_SCHOLAR_API_BASE_URL", "https://api.semanticscholar.org/graph/v1"))
@@ -135,3 +142,19 @@ MAX_QUESTIONS_TO_GENERATE = int(clean_env_var(os.getenv("MAX_QUESTIONS_TO_GENERA
 # 在模块末尾定义完所有变量后再进行目录创建
 # 当模块被导入时自动确保目录存在
 ensure_directories()
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+    # Logging Configuration
+    LOG_LEVEL: str = Field("INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)")
+    LOG_DIR: str = Field("logs", description="Directory for log files")
+
+    # Analysis Configuration
+    MAX_QUESTIONS_TO_GENERATE: int = Field(10, ge=1, description="Maximum number of Q&A pairs to generate")
+    MAX_CONTENT_CHARS_FOR_LLM: int = Field(15000, ge=1000, description="Maximum content characters to pass to LLM for analysis tasks")
+
+    # Derived configurations (like LOG_FILE) can be defined as properties or methods if needed
+    @property
+    def LOG_FILE(self) -> str:
+        return os.path.join(self.LOG_DIR, f"slais_{CURRENT_TIMESTAMP}.log")

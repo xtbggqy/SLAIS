@@ -1,2 +1,7 @@
-# 确保slais作为包被正确识别
-# 这个文件可以为空，但它的存在使得Python将目录视为包
+# This file makes the 'slais' directory a Python package.
+# It should be kept minimal and not contain re-exports of agent classes,
+# as agents are now in a separate top-level 'agents' package.
+
+# Example of what NOT to have here:
+# from ..agents.pdf_parsing_agent import PDFParsingAgent # Incorrect path after refactor
+# from agents import PDFParsingAgent # This would be a re-export, avoid for clean separation

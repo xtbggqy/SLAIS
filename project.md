@@ -22,6 +22,7 @@
     * 补充工具与最佳实践
 5.  项目实施步骤
 6.  审查与更新
+7.  如何运行项目
 
 ---
 
@@ -44,63 +45,42 @@
 * **项目结构树形图**
 
     ```
-    slais/
-    ├── main.py                      # 主程序入口，控制工作流，处理用户输入
-    ├── config.py                    # 配置管理，使用pydantic.BaseSettings，从根目录.env文件加载
-    ├── pdf_utils.py                 # PDF处理工具
-    │   ├── PDF转Markdown
-    │   ├── 表格提取
-    │   ├── 图像提取
-    │   └── 公式识别
-    ├── api_clients.py               # 外部API客户端
-    │   └── OpenAIClient            # OpenAI API交互
-    │       ├── 同步分析
-    │       ├── 异步分析
-    │       └── 批量处理
-    ├── analyzer.py                  # 内容分析器
-    │   ├── 核心信息提取
-    │   ├── 问答生成
-    │   ├── 创新点与不足分析
-    │   ├── 方法学分析
-    │   └── 可视化内容生成
-    ├── report_builder.py            # 报告生成器
-    │   ├── HTML报告生成
-    │   ├── 交互元素添加
-    │   ├── PDF报告导出
-    │   ├── 演示文稿生成
-    │   └── JSON数据导出
-    ├── cache_manager.py             # 缓存管理
-    │   ├── API响应缓存
-    │   ├── 分析结果缓存
-    │   └── 持久化存储
-    ├── error_handler.py             # 错误处理
-    │   ├── 异常日志记录
-    │   ├── 重试机制
-    │   └── 优雅降级处理
-    ├── utils/                       # 通用工具函数
-    │   ├── logging_utils.py         # 日志工具
-    │   └── file_utils.py            # 文件操作工具
-    ├── tests/                       # 测试套件
-    │   ├── unit/                    # 单元测试
-    │   │   ├── test_pdf_utils.py
-    │   │   ├── test_api_clients.py
-    │   │   └── ...
-    │   └── integration/             # 集成测试
-    │       ├── test_workflows.py
-    │       └── ...
-    └── .env                         # 项目配置文件 (位于项目根目录, main.py中加载)
+    slais_project_root/
+    ├── main.py                      # 主程序入口 (位于项目根目录)
+    ├── slais/                       # 核心SLAIS功能模块
+    │   ├── config.py                # 配置管理
+    │   ├── pdf_utils.py             # PDF处理工具
+    │   ├── pubmed_client.py         # PubMed API客户端
+    │   ├── semantic_scholar_client.py # Semantic Scholar API客户端
+    │   ├── utils/                   # 通用工具函数
+    │   │   ├── logging_utils.py     # 日志工具
+    │   │   └── file_utils.py        # (规划中) 文件操作工具
+    │   └── __init__.py
+    ├── agents/                      # 智能体模块
+    │   ├── base_agent.py            # 智能体基类
+    │   ├── pdf_parsing_agent.py     # PDF解析智能体
+    │   ├── metadata_fetching_agent.py # 元数据获取智能体
+    │   ├── llm_analysis_agent.py    # LLM分析智能体 (方法、创新、QA)
+    │   ├── prompts.py               # LLM提示词模板
+    │   ├── llm_clients.py           # LLM客户端定义和映射 (新文件)
+    │   └── __init__.py
+    ├── tests/                       # 测试套件 (规划中)
+    │   ├── unit/
+    │   └── integration/
+    ├── .env                         # 项目配置文件
+    └── project.md                   # 本项目说明文档
     ```
 
 * **数据流图**
 
     ```
-    PDF文件 --> PDF处理器(pdf_utils.py) --> 提取内容
+    PDF文件 --> PDF处理器(slais/pdf_utils.py) --> 提取内容
                                        |
                                        v
-                           外部API客户端(api_clients.py) --> 获取元数据和相关信息
+                           外部API客户端(slais/pubmed_client.py, slais/semantic_scholar_client.py) --> 获取元数据和相关信息
                                        |
                                        v
-                           内容分析器(analyzer.py) --> 内容分析和洞察生成
+                           LLM分析智能体(agents/llm_analysis_agent.py, 使用 agents/prompts.py) --> 内容分析和洞察生成
                                        |
                                        v
                            报告生成器(report_builder.py) --> 生成最终报告
@@ -134,19 +114,19 @@
 
 * **核心模块说明**
 
-    1.  **`main.py` (Orchestrator):**
+    1.  **`main.py` (位于项目根目录) (Orchestrator):**
         * 程序的入口点。
         * 处理用户输入（例如，PDF文件路径）。
-        * 从 `config.py` (环境变量 `.env`) 获取文章的DOI。
-        * 调用其他模块，按顺序执行整个流程。
+        * 从 `slais/config.py` (环境变量 `.env`) 获取配置。
+        * 初始化 OpenAI LLM 客户端 (从 `langchain_openai` 直接导入 `ChatOpenAI`)。
+        * 调用 `agents` 和 `slais` 包中的其他模块，按顺序执行整个流程。
+        * 调用 `save_report` 函数，该函数现在会保存JSON报告、Markdown格式的综合报告，以及参考文献和相关文献的CSV文件。
         * 进行顶层的错误处理和日志记录。
         * 支持命令行参数（可使用`argparse`或`typer`库）。
         * 提供简单的进度显示（可使用`tqdm`或`rich.progress`）。
-        * 加载项目根目录下 `.env` 文件中的环境变量 (例如，使用 `python-dotenv`) 以供配置模块 (`config.py`) 使用。
+        * 加载项目根目录下 `.env` 文件中的环境变量 (例如，使用 `python-dotenv`) 以供配置模块 (`slais/config.py`) 使用。
 
-    2.  **`pdf_utils.py` (PDF Processor):**
-        * **DOI提取模块：** (已移除)
-            * DOI不再从此模块提取。它现在通过 `config.py` 从 `.env` 文件中配置 (`ARTICLE_DOI` 环境变量)。
+    2.  **`slais/pdf_utils.py` (PDF Processor):**
         * **PDF转Markdown模块：**
             * `convert_pdf_to_markdown(pdf_path, output_dir)`: 使用 `magic_pdf` 库（MinerU）将PDF内容转换为Markdown格式，保留文档结构，支持OCR和文本模式处理。
         * **增强功能：**
@@ -155,63 +135,38 @@
             * `detect_equations(pdf_path)`: 使用 `magic_pdf` 识别和格式化PDF中的公式（支持LaTeX）。
             * `enhance_text_extraction(pdf_path)`: 使用 `magic_pdf` 的OCR功能处理扫描版PDF或文本提取效果不佳的PDF。
 
-    3.  **`api_clients.py` (External API Client):**
-        * **OpenAI客户端 (`OpenAIClient` class):**
-            * `__init__(api_key)`: 初始化OpenAI API客户端（API密钥通过`config.py`获取）。
-            * `analyze_text(prompt, text_content)`: 向OpenAI API发送文本和提示，获取分析结果。
-            * `async_analyze_text(prompt, text_content)`: 异步版本，使用`asyncio`和`httpx`提高并发处理能力。
-            * `batch_analyze(prompts_and_contents)`: 批量处理多个文本分析请求。
+    3.  **`slais/pubmed_client.py` 和 `slais/semantic_scholar_client.py` (External API Clients):**
+        * **PubMed客户端 (`PubMedClient` class):**
+            * `__init__(api_key)`: 初始化PubMed API客户端（API密钥通过`config.py`获取）。
+            * `get_pmid_from_doi(doi)`: 根据DOI获取PMID。
+            * `get_article_details(pmid_or_doi)`: 获取文章详细信息。
+        * **Semantic Scholar客户端 (`SemanticScholarClient` class):**
+            * 提供类似功能，用于获取文献元数据。
 
-    4.  **`analyzer.py` (Content Analyzer using OpenAI):**
-        * **核心信息提取模块：**
-            * `extract_paper_insights(openai_client, md_content, abstract)`: 构建提示，分析研究目的、方法、创新点等。
-            * 使用`pydantic`模型定义分析结果的数据结构，确保类型安全和数据验证。
-        * **问答生成模块：**
-            * `generate_q_and_a(openai_client, md_content, insights, num_questions=30)`: 生成问题和答案。
-            * `classify_questions(questions)`: 使用`sklearn`对问题进行分类（基础、中级、高级）。
-        * **创新与不足分析模块：**
-            * 使用`spacy`或`nltk`进行文本预处理，提高分析质量。
-            * `analyze_novelty_and_limitations(openai_client, md_content, insights, references_info)`: 分析创新点和不足。
-        * **新增功能：**
-            * `extract_methodology_details(openai_client, md_content)`: 深入分析研究方法学内容。
-            * `evaluate_statistical_approach(openai_client, md_content)`: 评估文章的统计方法是否恰当。
-            * `generate_visual_summary(insights)`: 使用`matplotlib`或`plotly`生成研究概述的可视化内容。
-        * **JSON响应处理：** OpenAI API返回的JSON内容可能偶尔存在格式问题（例如，缺少逗号）。本模块的各个分析方法包含错误处理逻辑，会捕获`json.JSONDecodeError`，记录详细错误和原始API响应，并返回包含错误信息的结构化数据，而不是使程序崩溃。
+    4.  **`agents/llm_analysis_agent.py` (LLM Analysis Agents):**
+        * 包含 `MethodologyAnalysisAgent`, `InnovationExtractionAgent`, `QAGenerationAgent` 类，均继承自 `agents/base_agent.py` 中的 `ResearchAgent`。
+        * 职责：与通过 `main.py` (使用 `slais/config.py` 配置) 初始化的 OpenAI LLM 客户端交互，执行文本内容的分析。
+        * 使用 `agents/prompts.py` 中的提示模板。
+        * 处理LLM的JSON响应，包含错误处理逻辑。
 
-    5.  **`report_builder.py` (Report Generator):**
-        * `generate_html_report(data_dict, template_path="report_template.html")`:
-            * 使用`Jinja2`模板引擎，将数据填充到HTML模板中。
-            * 支持响应式设计，使用现代CSS框架如Bootstrap或Tailwind CSS。
-        * **新增功能：**
-            * `add_interactive_elements(report_html)`: 添加交互式元素，如可折叠部分、标签页等，使用Alpine.js。
-            * `generate_pdf_report(data_dict)`: 使用`weasyprint`将HTML报告转换为PDF。
-            * `generate_presentation(data_dict)`: 生成简要演示文稿，使用`python-pptx`。
-            * `export_data_as_json(data_dict)`: 导出分析数据为JSON格式，便于后续处理。
+    5.  **`agents/llm_clients.py` (LLM Clients):**
+        * 定义并映射 LangChain 的 `ChatOpenAI` 客户端类。
+        * `LLM_PROVIDER_CLIENTS`: 一个字典，将字符串标识符 "openai" 映射到 `ChatOpenAI` 类。
+        * (注意: 随着仅使用OpenAI的简化，`main.py` 可能直接实例化 `ChatOpenAI`，使此文件的映射作用减弱，但保留结构以备未来可能重新支持多提供商)。
 
-    6.  **`cache_manager.py` (Cache Manager):**
-        * `CacheManager` 类用于缓存API响应和分析结果，提高性能并减少API调用。
-        * 使用`diskcache`或`joblib`实现持久化缓存。
-        * `cache_api_response(key, response)`: 缓存API响应。
-        * `get_cached_response(key)`: 获取缓存的响应。
-        * `cache_analysis_result(pdf_hash, result)`: 缓存文献分析结果。
-
-    7.  **`error_handler.py` (Error Handler):**
-        * 集中管理错误处理逻辑。
-        * `setup_logging()`: 配置日志系统，使用`loguru`替代标准`logging`。
-        * `handle_api_error(error, retry_count=3)`: 处理API错误，包括重试逻辑。
-        * `handle_pdf_processing_error(error)`: 处理PDF处理错误。
-
-    8.  **`config.py` (Configuration Management):**
+    6.  **`slais/config.py` (Configuration Management):**
         * 使用`pydantic.BaseSettings`进行高级配置管理。
         * **核心职责：** 从项目根目录下的 `.env` 文件、环境变量中安全加载配置项（如API密钥、路径设置等）。
         * 提供类型验证和默认值设置，确保配置的健壮性。
         * 应用程序的其他模块通过此模块统一访问配置信息。
+        * `MAX_CONTENT_CHARS_FOR_LLM`: 配置传递给LLM进行分析（如方法学、创新点、QA生成）的内容的最大字符数。
+        * `MAX_QUESTIONS_TO_GENERATE`: 配置LLM生成问答对的最大数量。
 
-    9.  **`utils/` (Utility Functions):**
+    7.  **`slais/utils/` (Utility Functions):**
         * `logging_utils.py`: 提供基于`loguru`的日志配置和便捷的日志记录函数。
         * `file_utils.py`: 包含文件读写、路径操作等通用文件操作工具函数。
 
-    10. **`tests/` (Test Suite):**
+    8.  **`tests/` (Test Suite):**
         * 包含所有单元测试和集成测试。
         * `unit/`: 存放针对单个模块或函数的单元测试。
         * `integration/`: 存放测试多个模块交互的集成测试。
@@ -247,7 +202,7 @@
         * 避免捕获通用的 `Exception`，除非是为了重新抛出或用于顶层错误日志记录。
         * 错误消息【必须 (MUST)】清晰且信息丰富。
     * **3.2.6. 配置管理：**
-        * API密钥、文件路径和其他可配置参数【禁止 (MUST NOT)】硬编码。它们【必须 (MUST)】通过环境变量进行管理。这些变量应在应用程序主入口点 (`main.py`) 从项目根目录下的 `.env` 文件（使用 `python-dotenv` 库）加载，并通过集中的配置模块 `config.py`（使用 `pydantic.BaseSettings`）进行结构化访问和验证。
+        * API密钥、文件路径和其他可配置参数【禁止 (MUST NOT)】硬编码。它们【必须 (MUST)】通过环境变量进行管理。这些变量应在应用程序主入口点 (`main.py`) 从项目根目录下的 `.env` 文件（使用 `python-dotenv` 库）加载，并通过集中的配置模块 `slais/config.py`（使用 `pydantic.BaseSettings`）进行结构化访问和验证。
     * **3.2.7. 依赖管理：**
         * 项目依赖【必须 (MUST)】使用 `requirements.txt` 文件（例如通过 `pip freeze > requirements.txt` 生成）或 `pyproject.toml` 文件（如果使用如Poetry、PDM等现代包管理工具，或配合构建后端）进行管理。这些依赖在由`mamba`创建的环境中进行安装和管理。
 
@@ -267,8 +222,8 @@
             * **边界条件：** 边缘情况，例如：空输入（空字符串、列表、字典）、`None` 输入（在适用且已处理的情况下）、零值、负值（针对数值输入）、允许的最大/最小值、触发不同逻辑分支的输入。
             * **错误条件：** 预期会引发特定异常的无效输入。测试【必须 (MUST)】断言抛出了正确的异常类型。
         * **SLAIS示例场景：**
-            * `pdf_utils.extract_doi_from_text()`：使用包含各种格式DOI的PDF、不含DOI的PDF、格式错误的PDF（如果可行模拟）进行测试。
-            * `api_clients.PubMedClient.get_pmid_from_doi()`：使用有效的DOI、无效的DOI格式、在PubMed中未找到的DOI进行测试。
+            * `slais/pdf_utils.extract_doi_from_text()`：使用包含各种格式DOI的PDF、不含DOI的PDF、格式错误的PDF（如果可行模拟）进行测试。
+            * `slais/pubmed_client.get_pmid_from_doi()`：使用有效的DOI、无效的DOI格式、在PubMed中未找到的DOI进行测试。
             * 解析PubMed特定XML结构的工具函数。
         * **属性测试（Property-based Testing）：**
             * 对于特定函数，【应当 (SHOULD)】考虑使用`hypothesis`等属性测试库进行更全面的测试。
@@ -284,9 +239,9 @@
             * **外部服务：** 由于不可靠性、速率限制和成本，自动集成测试中【应当 (SHOULD)】避免真实的外部API调用（PubMed, OpenAI）。使用模拟/桩对象（参见3.3.4节）。如果可以针对外部服务的预发布/测试实例进行测试且可靠，则【可以 (MAY)】考虑用于有限的一组测试。
             * **容器化集成测试：** 【可以 (MAY)】使用Docker容器化测试环境，确保测试环境一致性。使用`testcontainers-python`为本地数据库或依赖服务创建隔离测试实例。
         * **SLAIS示例场景：**
-            * 测试从`pdf_utils.py`（提取DOI）到`api_clients.PubMedClient`（获取元数据）的流程，模拟实际到PubMed的HTTP请求。
-            * 测试从`pdf_utils.py`（PDF转Markdown）到`analyzer.py`（为OpenAI准备数据）的流程，模拟OpenAI API调用。
-            * 测试从`analyzer.py`聚合数据到`report_builder.py`的流程，以确保基于不同输入形成正确的HTML结构。
+            * 测试从`slais/pdf_utils.py`（提取DOI）到`slais/pubmed_client.PubMedClient`（获取元数据）的流程，模拟实际到PubMed的HTTP请求。
+            * 测试从`slais/pdf_utils.py`（PDF转Markdown）到`agents/llm_analysis_agent.py`（为OpenAI准备数据）的流程，模拟OpenAI API调用。
+            * 测试从`agents/llm_analysis_agent.py`聚合数据到`report_builder.py`的流程，以确保基于不同输入形成正确的HTML结构。
 
     * **3.3.4. 模拟（Mocking）与桩（Stubbing）**
         * **目的：** 通过用受控的测试替身（模拟对象或桩对象）替换真实依赖项，来隔离被测单元/组件。这使得测试更快、更可靠且具有确定性。
@@ -349,7 +304,7 @@
         # 或者如果使用 pyproject.toml (例如，与Hatch, Flit, PDM, Poetry等构建后端)
         # pip install .
         ```
-    * **配置文件：** 项目的敏感配置（如API密钥）和环境特定参数【必须 (MUST)】存储在位于项目根目录的 `.env` 文件中。此文件应被加入 `.gitignore` 以避免提交到版本控制系统。`config.py` 模块将负责加载这些配置。
+    * **配置文件：** 项目的敏感配置（如API密钥）和环境特定参数【必须 (MUST)】存储在位于项目根目录的 `.env` 文件中。此文件应被加入 `.gitignore` 以避免提交到版本控制系统。`slais/config.py` 模块将负责加载这些配置。
 
 * **4.2. 推荐工具**
     * **测试框架：** 强烈推荐`pytest`，因其功能丰富、插件生态系统广泛且语法简洁。`unittest`（Python内置库）也可接受。
@@ -392,13 +347,13 @@
     * 设置`pre-commit`钩子，集成`black`、`isort`和`flake8` (或 `ruff`)。
 2.  **步骤 0.2: 配置与CI/CD设置**
     * 创建项目根目录下的 `.env.example` 文件作为配置模板。实际的 `.env` 文件用于本地开发，不提交到版本库。在此文件中设置 `ARTICLE_DOI` 及其他必要配置。
-    * 使用`pydantic.BaseSettings`在`config.py`中创建配置管理系统，该系统能够从环境变量和根目录下的 `.env` 文件加载配置 (包括 `ARTICLE_DOI`)。
+    * 使用`pydantic.BaseSettings`在`slais/config.py`中创建配置管理系统，该系统能够从环境变量和根目录下的 `.env` 文件加载配置 (包括 `ARTICLE_DOI`, OpenAI API 相关设置)。
     * 设置GitHub Actions工作流，自动运行测试（单元测试、集成测试）和代码质量检查（linting, formatting）。
     * 配置Docker环境（`Dockerfile`, `docker-compose.yml`），用于一致的开发、测试和潜在的部署需求。
 
 **Phase 1: PDF处理与增强** (使用MinerU的`magic_pdf`库)
 3.  步骤 1.1: (已移除 - DOI提取)
-    * DOI 现在通过项目根目录下的 `.env` 文件中的 `ARTICLE_DOI` 环境变量进行配置，并由 `config.py` 加载。`main.py` 直接使用此配置的DOI。
+    * DOI 现在通过项目根目录下的 `.env` 文件中的 `ARTICLE_DOI` 环境变量进行配置，并由 `slais/config.py` 加载。`main.py` 直接使用此配置的DOI。
 4.  步骤 1.2 (原步骤 1.2): PDF到Markdown的高级转换
     * 实现 `convert_pdf_to_markdown(pdf_path, output_dir=None)` 函数，使用 `magic_pdf` 库将PDF转换为Markdown格式。
     * 支持OCR和文本模式处理，以适应不同类型的PDF文件。
@@ -426,13 +381,10 @@
     * 支持缓存有效期设置，默认30天，可通过配置文件调整。
     * 添加日志记录，跟踪缓存命中和失效情况。
     * 确保缓存键的唯一性和一致性，避免缓存冲突。
-9.  步骤 2.3: 健壮的OpenAI API客户端
-    * 实现 `OpenAIClient` 类，使用 `httpx` 库支持异步请求。
-    * 实现方法如 `analyze_text(prompt, text_content)` 和 `async_analyze_text(prompt, text_content)`，用于文本分析。
-    * 实现批量处理方法 `batch_analyze(prompts_and_contents)`，提高处理效率。
-    * 从配置文件中加载API密钥，并添加错误处理和重试机制。
-    * 支持自定义 OpenAI API 基础 URL 和模型，通过配置文件设置。
-    * 添加日志记录，跟踪API请求、响应和错误。
+9.  步骤 2.3: 健壮的OpenAI API客户端 (现在是项目中唯一的LLM客户端)
+    * `main.py` 中直接实例化 `ChatOpenAI`。
+    * 从配置文件中加载API密钥、模型名称、基础URL（可选）和温度。
+    * 添加错误处理和重试机制（LangChain客户端通常内置部分重试逻辑，可按需增强）。
 10. 步骤 2.4: API客户端测试套件
     * 使用 `pytest` 框架创建单元测试和集成测试。
     * 使用 `unittest.mock` 或 `responses` 模拟API响应，避免真实API调用。
@@ -461,3 +413,69 @@
 **6. 审查与更新**
 
 本文档是一个动态文档，随着SLAIS项目的发展和新需求或最佳实践的出现，【可以 (MAY)】进行更新。提议的更改【应当 (SHOULD)】与项目团队讨论并达成一致后方可实施。定期审查本文档（例如，每个主要版本发布前或每季度）以确保其相关性和准确性。
+
+---
+
+**7. 如何运行项目**
+
+要运行SLAIS项目，请遵循以下步骤：
+
+1.  **环境设置：**
+    *   确保已按照本文档 "4.1. 环境设置" 部分的说明，使用 `mamba` (或 `conda`) 创建并激活了项目的Python虚拟环境。
+    *   安装所有必要的依赖项：
+        ```bash
+        pip install -r requirements.txt
+        ```
+        (如果项目未来采用 `pyproject.toml`，则使用相应的安装命令，如 `pip install .`)
+
+2.  **配置 `.env` 文件：**
+    *   在项目根目录 (`slais_project_root/`) 下，复制 `.env.example` (如果提供) 为 `.env`，或者直接创建 `.env` 文件。
+    *   根据您的实际情况填写 `.env` 文件中的配置项，特别是：
+        *   `OPENAI_API_KEY`
+        *   `OPENAI_API_MODEL`
+        *   `OPENAI_API_BASE_URL` (如果使用兼容API或代理，否则留空以使用OpenAI官方端点)
+        *   `NCBI_EMAIL`
+        *   `ARTICLE_DOI` (要分析的文献的DOI)
+        *   `DEFAULT_PDF_PATH` (如果希望在不指定命令行参数时处理特定PDF)
+        *   `SEMANTIC_SCHOLAR_API_KEY` (可选，但推荐)
+        *   `MAX_CONTENT_CHARS_FOR_LLM` (例如, `50000`，用于控制传递给LLM的内容长度，设置一个较大的值以避免不必要的截断)
+        *   `MAX_QUESTIONS_TO_GENERATE` (例如, `10`)
+    *   确保 `PDF_INPUT_DIR` 指向包含您PDF文件的目录，并且 `DEFAULT_PDF_PATH` (如果使用) 或通过命令行指定的PDF路径有效。
+
+3.  **运行主程序：**
+    *   打开终端或命令行界面。
+    *   导航到项目根目录 (`slais_project_root/`)。
+    *   激活之前创建的Python虚拟环境。
+    *   执行位于项目根目录的 `main.py` 脚本。
+
+    *   **处理默认PDF** (在 `.env` 中由 `DEFAULT_PDF_PATH` 指定)：
+        ```bash
+        python main.py
+        ```
+
+    *   **处理指定的PDF文件** (通过命令行参数)：
+        ```bash
+        python main.py --pdf "path/to/your/document.pdf"
+        ```
+        将 `"path/to/your/document.pdf"` 替换为实际的PDF文件路径。
+
+4.  **查看输出：**
+    *   分析结果将保存在 `.env` 文件中 `OUTPUT_BASE_DIR` 指定的目录下的一个与PDF文件名相关的子目录中。
+    *   输出包括：
+        *   一个详细的JSON文件 (`*_analysis_report_*.json`)。
+        *   一个Markdown格式的综合报告 (`*_analysis_report_*.md`)。
+        *   如果获取了参考文献数据，会有一个 `*_references_*.csv` 文件。
+        *   如果获取了PubMed相关文献数据，会有一个 `*_related_pubmed_*.csv` 文件。
+    *   日志文件将保存在 `LOG_DIR` 指定的目录中。
+
+**示例命令 (假设在项目根目录):**
+```bash
+# 激活环境 (示例)
+# conda activate slais_env
+
+# 运行并处理 .env 中 DEFAULT_PDF_PATH 指定的PDF
+python main.py
+
+# 运行并处理位于 pdfs/my_research_paper.pdf 的PDF
+python main.py --pdf "pdfs/my_research_paper.pdf"
+```

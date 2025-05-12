@@ -140,6 +140,12 @@ class SemanticScholarClient:
                             if i < len(valid_dois):  # 确保索引在有效范围内
                                 original_doi = valid_dois[i] # 假设顺序对应
                                 if paper_data and paper_data.get("paperId"):
+                                    # 确保保留原始DOI，因为返回的paper_data中可能没有DOI或DOI不同
+                                    if not paper_data.get("externalIds") or not paper_data["externalIds"].get("DOI"):
+                                        # 如果API返回中没有DOI，将原始DOI添加到结果中
+                                        if not paper_data.get("externalIds"):
+                                            paper_data["externalIds"] = {}
+                                        paper_data["externalIds"]["DOI"] = original_doi
                                     results[original_doi] = paper_data
                                 elif paper_data: # 有数据但无paperId
                                     logger.warning(f"[S2 Batch] DOI {original_doi} 返回数据但无paperId: {str(paper_data)[:100]}")
@@ -297,54 +303,51 @@ class SemanticScholarClient:
             logger.info(f"正在获取批次 {batch_num}/{total_batches} ({len(batch)}个DOI)...")
             
             # 构造批量请求
-            batch_results = []
-            for doi in batch:
+            batch_paper_details_tasks = [self.get_paper_details_by_doi(doi) for doi in batch]
+            batch_s2_results = await asyncio.gather(*batch_paper_details_tasks, return_exceptions=True)
+
+            current_batch_formatted_results = []
+            for result in batch_s2_results:
+                if isinstance(result, Exception) or not result:
+                    logger.warning(f"获取参考文献详情时出错或无结果: {result if isinstance(result, Exception) else '无结果'}")
+                    continue
+
                 try:
-                    result = await self.get_paper_details_by_doi(doi)
-                    if result:
-                        # 获取PMID和PMCID (如果存在)
-                        pmid = result.get("externalIds", {}).get("PubMed", "")
-                        pmcid = result.get("externalIds", {}).get("PMC", "")
-                        
-                        # 确保字段一致性，与相关文章格式保持一致
-                        formatted_result = {
-                            "pmid": pmid,
-                            "title": result.get("title", ""),
-                            "journal": result.get("venue", ""),
-                            "pub_date": str(result.get("year", "")),
-                            "abstract": result.get("abstract", ""),
-                            "doi": doi,
-                        }
-                        
-                        # 只有在pmid存在时才添加pmid_link
-                        if pmid:
-                            formatted_result["pmid_link"] = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
-                        else:
-                            formatted_result["pmid_link"] = ""
-                        
-                        # 只有在pmcid存在时才添加pmcid_link
-                        if pmcid:
-                            formatted_result["pmcid"] = pmcid
-                            formatted_result["pmcid_link"] = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
-                        else:
-                            formatted_result["pmcid"] = ""
-                            formatted_result["pmcid_link"] = ""
-                        
-                        # 处理作者
-                        if "authors" in result and isinstance(result["authors"], list):
-                            author_names = [author.get("name", "") for author in result["authors"] if isinstance(author, dict) and "name" in author]
-                            formatted_result["authors"] = "; ".join(author_names)
-                        else:
-                            formatted_result["authors"] = ""
+                    # 获取PMID和PMCID (如果存在)
+                    pmid = result.get("externalIds", {}).get("PubMed", "")
+                    pmcid = result.get("externalIds", {}).get("PMC", "")
+                    s2_paper_id = result.get("paperId", "")
+                    citation_count = result.get("citationCount", 0) # Default to 0 if not present
+                    
+                    # 确保字段一致性
+                    formatted_result = {
+                        "doi": result.get("externalIds", {}).get("DOI", ""), # Ensure DOI is from S2 if primary key was S2 ID
+                        "title": result.get("title", ""),
+                        "journal": result.get("venue", ""),
+                        "pub_date": str(result.get("year", "")),
+                        "abstract": result.get("abstract", ""),
+                        "s2_paper_id": s2_paper_id,
+                        "citation_count": citation_count,
+                        "pmid": pmid,
+                        "pmcid": pmcid,
+                        "pmid_link": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else "",
+                        "pmcid_link": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else "",
+                    }
+                    
+                    # 处理作者
+                    if "authors" in result and isinstance(result["authors"], list):
+                        author_names = [author.get("name", "") for author in result["authors"] if isinstance(author, dict) and "name" in author]
+                        formatted_result["authors_str"] = "; ".join(author_names) # 修改键名
+                    else:
+                        formatted_result["authors_str"] = "" # 修改键名
                             
-                        batch_results.append(formatted_result)
+                    current_batch_formatted_results.append(formatted_result)
                 except Exception as e:
-                    logger.warning(f"获取DOI {doi}详情失败: {str(e)}")
+                    logger.warning(f"格式化DOI {result.get('externalIds', {}).get('DOI', 'N/A')} 的S2详情时出错: {str(e)}")
                     continue
             
-            # 添加到结果列表
-            all_references.extend(batch_results)
-            logger.info(f"批次 {batch_num} 成功获取 {len(batch_results)}/{len(batch)} 条参考文献")
+            all_references.extend(current_batch_formatted_results)
+            logger.info(f"批次 {batch_num} 成功获取 {len(current_batch_formatted_results)}/{len(batch)} 条参考文献的详细格式化信息。")
             
             # 避免API限制，批次间短暂暂停
             if i + batch_size < len(references_dois):

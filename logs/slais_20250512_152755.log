@@ -1,0 +1,111 @@
+2025-05-12 15:28:03,505 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250512_152755.log
+2025-05-12 15:28:03,507 - slais_app - INFO - 开始处理文章，PDF路径: pdfs/darwin.pdf, DOI: 10.1126/science.aao4593
+2025-05-12 15:28:05,857 - slais_app - INFO - OpenAI LLM客户端初始化完成。模型: qwen-turbo
+2025-05-12 15:28:05,858 - slais_app - INFO - 步骤 1: 解析PDF内容...
+2025-05-12 15:28:05,859 - slais_app - INFO - 开始解析PDF文件: pdfs/darwin.pdf
+2025-05-12 15:28:05,863 - slais_app - INFO - 创建Markdown输出目录：output\darwin\darwin_markdown
+2025-05-12 15:28:05,867 - slais_app - INFO - 图片目录已准备好：output\darwin\darwin_markdown\images
+2025-05-12 15:28:05,869 - slais_app - INFO - PDF内容已读取
+2025-05-12 15:28:08,436 - slais_app - INFO - 使用文本模式处理PDF
+2025-05-12 15:28:38,764 - slais_app - INFO - PDF处理完成
+2025-05-12 15:28:39,508 - slais_app - INFO - 模型结果已绘制
+2025-05-12 15:28:39,949 - slais_app - INFO - 布局结果已绘制
+2025-05-12 15:28:43,772 - slais_app - INFO - 跨度结果已绘制
+2025-05-12 15:28:43,826 - slais_app - INFO - 内容列表分析: 共 37 个内容块
+2025-05-12 15:28:43,826 - slais_app - INFO - 找到 3 个图像块
+2025-05-12 15:28:43,827 - slais_app - INFO - 开始重命名图片并更新Markdown内容中的图片链接...
+2025-05-12 15:28:43,829 - slais_app - INFO - 在图像目录 'output\darwin\darwin_markdown\images' 中找到 3 个图像文件
+2025-05-12 15:28:43,830 - slais_app - INFO - 图片已重命名: '68c07b0f9a7992acd49d5ce1bac09af921781cb69898df61fc191c2120da4d6b.jpg' -> 'image_000.jpg'
+2025-05-12 15:28:43,831 - slais_app - INFO - Markdown中的图片链接已更新: 'images/68c07b0f9a7992acd49d5ce1bac09af921781cb69898df61fc191c2120da4d6b.jpg' -> 'images/image_000.jpg'
+2025-05-12 15:28:43,832 - slais_app - INFO - 图片已重命名: '8f8884210c0b46b7db1b53e6603fd97f88ba11e094d0f32a5182e9e228559e87.jpg' -> 'image_001.jpg'
+2025-05-12 15:28:43,832 - slais_app - INFO - Markdown中的图片链接已更新: 'images/8f8884210c0b46b7db1b53e6603fd97f88ba11e094d0f32a5182e9e228559e87.jpg' -> 'images/image_001.jpg'
+2025-05-12 15:28:43,834 - slais_app - INFO - 图片已重命名: 'd7df5ad620ff7ff5eada0bb492b5ace6ba85c4917241fa038d7ac2e2a2fa1a48.jpg' -> 'image_002.jpg'
+2025-05-12 15:28:43,835 - slais_app - INFO - Markdown中的图片链接已更新: 'images/d7df5ad620ff7ff5eada0bb492b5ace6ba85c4917241fa038d7ac2e2a2fa1a48.jpg' -> 'images/image_002.jpg'
+2025-05-12 15:28:43,835 - slais_app - INFO - 图片重命名和Markdown链接更新完成。共处理 3 张图片。
+2025-05-12 15:28:43,863 - slais_app - INFO - 更新后的Markdown文件已保存：output\darwin\darwin_markdown\darwin.md
+2025-05-12 15:28:43,925 - slais_app - INFO - 内容列表已保存
+2025-05-12 15:28:44,060 - slais_app - INFO - 中间JSON文件已保存
+2025-05-12 15:28:44,070 - slais_app - INFO - PDF解析完成，内容长度: 23703 字符
+2025-05-12 15:28:44,071 - slais_app - INFO - PDF内容提取完成，Markdown长度: 23703
+2025-05-12 15:28:44,071 - slais_app - INFO - 步骤 2: 获取元数据...
+2025-05-12 15:28:44,072 - slais_app - INFO - 从配置中获取的DOI: 10.1126/science.aao4593
+2025-05-12 15:28:44,073 - slais_app - INFO - 从配置中获取的邮箱: tests@gmail.com
+2025-05-12 15:28:44,073 - slais_app - INFO - 正在从 Semantic Scholar 获取原始文章 (DOI: 10.1126/science.aao4593) 的信息...
+2025-05-12 15:28:45,042 - slais_app - INFO - [S2] 成功获取DOI 10.1126/science.aao4593 的信息 (PaperID: 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1)。
+2025-05-12 15:28:45,044 - slais_app - INFO - 成功从S2获取原始文章信息 (S2 PaperID: 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1)
+2025-05-12 15:28:45,044 - slais_app - INFO - S2提供了PMID: 29170277。正在从PubMed获取/核实...
+2025-05-12 15:28:46,003 - slais_app - INFO - [PubMedClient] 批量获取PMID详情: 1个 (批次 1)
+2025-05-12 15:28:46,869 - slais_app - INFO - [PubMedClient] 成功获取 1/1 个PMID的详细信息。
+2025-05-12 15:28:46,873 - slais_app - INFO - 成功从PubMed获取PMID 29170277 的信息。
+2025-05-12 15:28:46,874 - slais_app - INFO - 元数据获取完成。
+2025-05-12 15:28:46,875 - slais_app - INFO - 步骤 3: 分析方法学...
+2025-05-12 15:28:46,875 - slais_app - INFO - 分析文献方法，内容长度: 23703 字符
+2025-05-12 15:28:46,876 - slais_app - ERROR - 方法分析时发生错误: module 'slais.config' has no attribute 'MAX_CONTENT_CHARS_FOR_LLM'
+2025-05-12 15:28:46,876 - slais_app - INFO - 方法学分析完成。
+2025-05-12 15:28:46,876 - slais_app - INFO - 步骤 4: 提取创新点...
+2025-05-12 15:28:46,876 - slais_app - INFO - 提取创新点，内容长度: 23703 字符
+2025-05-12 15:28:46,877 - slais_app - ERROR - 创新点提取时发生错误: module 'slais.config' has no attribute 'MAX_CONTENT_CHARS_FOR_LLM'
+2025-05-12 15:28:46,877 - slais_app - INFO - 创新点提取完成。
+2025-05-12 15:28:46,877 - slais_app - INFO - 步骤 5: 生成问答对...
+2025-05-12 15:28:46,878 - slais_app - INFO - 生成问答，内容长度: 23703 字符 (传递给分析前)
+2025-05-12 15:28:46,878 - slais_app - ERROR - 问答生成时发生错误: module 'slais.config' has no attribute 'MAX_CONTENT_CHARS_FOR_LLM'
+2025-05-12 15:28:46,885 - slais_app - INFO - 问答对生成完成。
+2025-05-12 15:28:46,886 - slais_app - INFO - 步骤 6: 获取参考文献...
+2025-05-12 15:28:46,886 - slais_app - INFO - 正在从Semantic Scholar获取论文ID:7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1的参考文献...
+2025-05-12 15:28:46,887 - slais_app - INFO - 步骤1: 获取论文 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1 的参考文献列表
+2025-05-12 15:28:47,468 - slais_app - INFO - [S2] PaperID 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1: 成功获取 34 条参考文献DOI (来自第一页)。
+2025-05-12 15:28:47,469 - slais_app - INFO - 找到 34 个参考文献DOI
+2025-05-12 15:28:47,470 - slais_app - INFO - 步骤2: 批量获取参考文献详细信息
+2025-05-12 15:28:47,470 - slais_app - INFO - 正在获取批次 1/2 (20个DOI)...
+2025-05-12 15:28:48,030 - slais_app - INFO - [S2] 成功获取DOI 10.1073/pnas.1000133107 的信息 (PaperID: 24299afede0f608b179aba4fa4d63a4a7ec714f9)。
+2025-05-12 15:28:48,031 - slais_app - INFO - [S2] 成功获取DOI 10.1098/rstb.2016.0146 的信息 (PaperID: 7fca1c290c6f1223a5007a31a0f5429c8eee5dd8)。
+2025-05-12 15:28:48,034 - slais_app - INFO - [S2] 成功获取DOI 10.3732/ajb.1400201 的信息 (PaperID: 574d105d675adf245f18cf13706b7f22e199c363)。
+2025-05-12 15:28:48,039 - slais_app - INFO - [S2] 成功获取DOI 10.1126/science.aad8786 的信息 (PaperID: d7c20041cdee4f1250acdc51a47242276aea5cb6)。
+2025-05-12 15:28:48,045 - slais_app - INFO - [S2] 成功获取DOI 10.1016/j.tig.2009.12.001 的信息 (PaperID: 51f1bdafa976dfd33d12c2bd753421d5ecc00375)。
+2025-05-12 15:28:48,047 - slais_app - INFO - [S2] 成功获取DOI 10.1098/rstb.2009.0283 的信息 (PaperID: ecb5e9c4c0beba5ec4bc8274496de580538701de)。
+2025-05-12 15:28:48,048 - slais_app - INFO - [S2] 成功获取DOI 10.1002/TAX.595005 的信息 (PaperID: 40e8a0839671c465079044505f459557164bace8)。
+2025-05-12 15:28:48,050 - slais_app - INFO - [S2] 成功获取DOI 10.2307/j.ctt5hhncc 的信息 (PaperID: 504b1d0d652e05588e9d282049a282a95a54dfa7)。
+2025-05-12 15:28:48,051 - slais_app - INFO - [S2] 成功获取DOI 10.1111/evo.12399 的信息 (PaperID: 49e84f8845192e7c2cae2a65ac1a1c0a898f6a0a)。
+2025-05-12 15:28:48,075 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1558-5646.2008.00599.x 的信息 (PaperID: 55a1b60959efb4caf07ab90f9b353ddbd264bc55)。
+2025-05-12 15:28:48,106 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1365-294X.2008.03898.x 的信息 (PaperID: fab61fee89149dc04cb572f1dd6a708f11cb079a)。
+2025-05-12 15:28:48,108 - slais_app - INFO - [S2] 成功获取DOI 10.1073/PNAS.0911761106 的信息 (PaperID: ba559c8b57bbd2e3c320a32780ee4c7ef7a56141)。
+2025-05-12 15:28:48,110 - slais_app - INFO - [S2] 成功获取DOI 10.1111/1755-0998.12665 的信息 (PaperID: fc0db40d47bb20dd26495f5d3b581c50325d7e55)。
+2025-05-12 15:28:48,112 - slais_app - INFO - [S2] 成功获取DOI 10.1007/s11692-011-9126-7 的信息 (PaperID: c3202cc806616648574c9ddcea7d3c9428d70144)。
+2025-05-12 15:28:48,113 - slais_app - INFO - [S2] 成功获取DOI 10.1111/mec.13685 的信息 (PaperID: af74783c16b225d7082dba4e1f5c971b09549954)。
+2025-05-12 15:28:48,114 - slais_app - INFO - [S2] 成功获取DOI 10.1371/journal.pone.0009490 的信息 (PaperID: d5677974ad0a645fbb71a6dc0355c54005239882)。
+2025-05-12 15:28:48,115 - slais_app - INFO - [S2] 成功获取DOI 10.1101/gr.094052.109 的信息 (PaperID: 20f6dda28b380eabb9c7bbb94063437dc735c63b)。
+2025-05-12 15:28:48,116 - slais_app - INFO - [S2] 成功获取DOI 10.1073/pnas.1505357112 的信息 (PaperID: d68a39aac052e30361e38b19aa1adc7e0ab9ab0e)。
+2025-05-12 15:28:48,130 - slais_app - INFO - [S2] 成功获取DOI 10.1038/nature14181 的信息 (PaperID: 8bc940e0734ff21da9ddee5fc9ae590744d5bade)。
+2025-05-12 15:28:48,153 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1365-294X.2011.05183.x 的信息 (PaperID: cc6df00cbc42e076d27d08a6ee384a29a905e438)。
+2025-05-12 15:28:48,157 - slais_app - INFO - 批次 1 成功获取 20/20 条参考文献的详细格式化信息。
+2025-05-12 15:28:48,670 - slais_app - INFO - 正在获取批次 2/2 (14个DOI)...
+2025-05-12 15:28:49,207 - slais_app - INFO - [S2] 成功获取DOI 10.1086/519795 的信息 (PaperID: dbc447956c16e27cfb030e40552359d3c79bc690)。
+2025-05-12 15:28:49,219 - slais_app - INFO - [S2] 成功获取DOI 10.1525/auk.2008.41008.3 的信息 (PaperID: 9ffd7faed9326b7bd5a28d6a60299086126d3e45)。
+2025-05-12 15:28:49,221 - slais_app - INFO - [S2] 成功获取DOI 10.1098/rspb.1981.0046 的信息 (PaperID: 0870edcc09f4e6a5c80afe2791f18db1a1e4bd11)。
+2025-05-12 15:28:49,244 - slais_app - INFO - [S2] 成功获取DOI 10.1046/j.1365-2540.2001.00900.x 的信息 (PaperID: b0eebc1f9f083098ff22d9db65803e3fd684783c)。
+2025-05-12 15:28:49,246 - slais_app - INFO - [S2] 成功获取DOI 10.1038/375313A0 的信息 (PaperID: c64fe56b3dc35d6a6c0b351566f4ed6021d7276e)。
+2025-05-12 15:28:49,247 - slais_app - INFO - [S2] 成功获取DOI 10.1038/nature03800 的信息 (PaperID: 652b159338ca0ff3b5d9fd234bc464d20202f6b7)。
+2025-05-12 15:28:49,248 - slais_app - INFO - [S2] 成功获取DOI 10.1046/J.1095-8312.2002.00076.X 的信息 (PaperID: 6179b910cbbaff0c3e92330e582c2d95866ced38)。
+2025-05-12 15:28:49,250 - slais_app - INFO - [S2] 成功获取DOI 10.1038/sj.hdy.6886170 的信息 (PaperID: 605a6133bf51f82ea2fad0c31df1c01e8b65cb27)。
+2025-05-12 15:28:49,251 - slais_app - INFO - [S2] 成功获取DOI 10.1093/JHERED/ESI026 的信息 (PaperID: 89cf7a57a1e7f60d6711e7b314dcf79afbbe6246)。
+2025-05-12 15:28:49,278 - slais_app - INFO - [S2] 成功获取DOI 10.1016/S0003-3472(83)80021-9 的信息 (PaperID: 1b7efce9bae2ac746a25bac526daa588354a8995)。
+2025-05-12 15:28:49,280 - slais_app - INFO - [S2] 成功获取DOI 10.1007/s100219900049 的信息 (PaperID: 86870ac23c84ec73d1842aed174059b5eaf1f3b3)。
+2025-05-12 15:28:49,281 - slais_app - INFO - [S2] 成功获取DOI 10.1111/j.1558-5646.1994.tb01313.x 的信息 (PaperID: aa4a5054260df262d72eed84f35202427fd45da3)。
+2025-05-12 15:28:49,317 - slais_app - INFO - [S2] 成功获取DOI 10.1038/nature04738 的信息 (PaperID: 6ddd5a7245e73d47a71b8c08cf715d8a4f123f07)。
+2025-05-12 15:28:49,325 - slais_app - INFO - [S2] 成功获取DOI 10.1016/j.tree.2011.09.002 的信息 (PaperID: 96828a7be5abda447e80746a7e15879c1d980092)。
+2025-05-12 15:28:49,327 - slais_app - INFO - 批次 2 成功获取 14/14 条参考文献的详细格式化信息。
+2025-05-12 15:28:49,328 - slais_app - INFO - 成功获取 34/34 条参考文献详情
+2025-05-12 15:28:49,329 - slais_app - INFO - 获取了 34 条参考文献的DOI，以及 34 条参考文献的详细信息。
+2025-05-12 15:28:49,329 - slais_app - INFO - 获取了 34 条参考文献的DOI。
+2025-05-12 15:28:49,330 - slais_app - INFO - 步骤 7: 获取相关文章 (PubMed)...
+2025-05-12 15:28:49,331 - slais_app - INFO - 正在从PubMed获取PMID:29170277的相关文章...
+2025-05-12 15:28:49,331 - slais_app - WARNING - Invalid max_results value, using default: 30
+2025-05-12 15:28:51,564 - slais_app - INFO - Found 30 related PMIDs for PMID: 29170277
+2025-05-12 15:28:52,878 - slais_app - INFO - Retrieved 30 articles details from PMIDs
+2025-05-12 15:28:52,880 - slais_app - INFO - 成功获取 30 篇PubMed相关文章
+2025-05-12 15:28:52,880 - slais_app - INFO - 获取了 30 篇PubMed相关文章。
+2025-05-12 15:28:52,880 - slais_app - INFO - 所有处理步骤完成。
+2025-05-12 15:28:52,887 - slais_app - INFO - JSON分析报告已保存到: output\darwin\darwin_analysis_report_20250512_152852.json
+2025-05-12 15:28:52,915 - slais_app - INFO - Markdown分析报告已保存到: output\darwin\darwin_analysis_report_20250512_152852.md
+2025-05-12 15:28:52,919 - slais_app - INFO - CSV报告已保存到: output\darwin\darwin_references_20250512_152852.csv
+2025-05-12 15:28:52,922 - slais_app - INFO - CSV报告已保存到: output\darwin\darwin_related_pubmed_20250512_152852.csv
