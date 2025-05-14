@@ -2,7 +2,8 @@ import os
 import csv
 import logging
 from typing import List, Dict
-from pubmed_client import PubmedClient
+from .pubmed_client import PubmedClient  # 修改导入
+from . import config  # 添加导入
 
 logger = logging.getLogger(__name__)
 

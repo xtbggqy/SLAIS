@@ -11,14 +11,19 @@ import csv # Import csv module
 from slais import config
 from slais.utils.logging_utils import logger, setup_logging
 from langchain_openai import ChatOpenAI # 直接导入ChatOpenAI
+from langchain.prompts import PromptTemplate # 导入PromptTemplate
 
 from agents.pdf_parsing_agent import PDFParsingAgent
 from agents.metadata_fetching_agent import MetadataFetchingAgent
 from agents.llm_analysis_agent import (
     MethodologyAnalysisAgent,
     InnovationExtractionAgent,
-    QAGenerationAgent
+    QAGenerationAgent,
+    StorytellingAgent,
+    MindMapAgent
 )
+from agents.callbacks import TokenUsageCallbackHandler # 新增导入
+from agents.formatting_utils import generate_enhanced_report # 从新模块导入格式化函数
 
 async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: str):
     """
@@ -28,16 +33,16 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
 
     # 1. 初始化LLM客户端 (直接使用OpenAI)
     llm_params = {
-        "model_name": config.OPENAI_API_MODEL,
-        "openai_api_key": config.OPENAI_API_KEY,
-        "temperature": config.OPENAI_TEMPERATURE
+        "model_name": config.settings.OPENAI_API_MODEL,
+        "openai_api_key": config.settings.OPENAI_API_KEY,
+        "temperature": config.settings.OPENAI_TEMPERATURE
     }
-    if config.OPENAI_API_BASE_URL: # 兼容可能存在的自定义OpenAI基础URL或兼容API
-        llm_params["openai_api_base"] = config.OPENAI_API_BASE_URL
+    if config.settings.OPENAI_API_BASE_URL: # 兼容可能存在的自定义OpenAI基础URL或兼容API
+        llm_params["openai_api_base"] = config.settings.OPENAI_API_BASE_URL
     
     try:
         llm = ChatOpenAI(**llm_params) # 直接实例化ChatOpenAI
-        logger.info(f"OpenAI LLM客户端初始化完成。模型: {config.OPENAI_API_MODEL}")
+        logger.info(f"OpenAI LLM客户端初始化完成。模型: {config.settings.OPENAI_API_MODEL}")
     except Exception as e:
         logger.error(f"初始化OpenAI LLM客户端失败: {e}")
         logger.error(f"使用的参数: {llm_params}")
@@ -45,12 +50,18 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         logger.debug(f"错误详情: {traceback.format_exc()}")
         return None
 
+    # 实例化 TokenUsageCallbackHandler
+    token_callback_handler = TokenUsageCallbackHandler(model_name=config.settings.OPENAI_API_MODEL)
+    callbacks_list = [token_callback_handler] # 创建回调列表
+
     # 2. 初始化智能体
     pdf_parser = PDFParsingAgent()
     metadata_fetcher = MetadataFetchingAgent()
     methodology_analyzer = MethodologyAnalysisAgent(llm)
     innovation_extractor = InnovationExtractionAgent(llm)
     qa_generator = QAGenerationAgent(llm)
+    storytelling_agent = StorytellingAgent(llm)
+    mindmap_agent = MindMapAgent(llm)
 
     # 3. 执行流程
     analysis_results = {}
@@ -75,22 +86,44 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
 
     # 3.3 方法学分析
     logger.info("步骤 3: 分析方法学...")
-    methodology_analysis = await methodology_analyzer.analyze_methodology(markdown_content)
+    methodology_analysis = await methodology_analyzer.analyze_methodology(
+        markdown_content, 
+        callbacks=callbacks_list # 传递回调
+    )
     analysis_results["methodology_analysis"] = methodology_analysis
     logger.info("方法学分析完成。")
 
     # 3.4 创新点提取
     logger.info("步骤 4: 提取创新点...")
-    innovation_extraction = await innovation_extractor.extract_innovations(markdown_content)
+    innovation_extraction = await innovation_extractor.extract_innovations(
+        markdown_content, 
+        callbacks=callbacks_list # 传递回调
+    )
     analysis_results["innovation_extraction"] = innovation_extraction
     logger.info("创新点提取完成。")
 
-    # 3.5 问答生成
-    logger.info("步骤 5: 生成问答对...")
-    qa_pairs = await qa_generator.generate_qa(markdown_content)
+    # 3.5 问答生成 - 先生成问题
+    logger.info("步骤 5a: 生成问题...")
+    questions = await qa_generator.generate_questions(
+        markdown_content, 
+        callbacks=callbacks_list # 传递回调
+    )
+    logger.info(f"生成了 {len(questions)} 个问题。")
+    analysis_results["questions"] = questions
+
+    # 3.5 问答生成 - 再为每个问题生成答案
+    logger.info("步骤 5b: 为每个问题生成答案...")
+    if questions:
+        qa_pairs = await qa_generator.generate_answers_batch(
+            questions,
+            markdown_content,
+            callbacks=callbacks_list  # 传递回调
+        )
+    else:
+        qa_pairs = []
+
     analysis_results["qa_pairs"] = qa_pairs
-    logger.info("问答对生成完成。")
-    
+
     # 3.6 (可选) 获取参考文献和相关文章 - 示例
     if s2_info and s2_info.get("paperId"):
         logger.info("步骤 6: 获取参考文献...")
@@ -112,100 +145,28 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_info["pmid"], ncbi_email)
         analysis_results["related_articles_pubmed"] = related_articles_pubmed
         logger.info(f"获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
-        
+
+    # 3.7 故事讲述
+    logger.info("步骤 8: 以讲故事的方式讲述文献...")
+    story = await storytelling_agent.tell_story(
+        markdown_content,
+        callbacks=callbacks_list  # 传递回调
+    )
+    analysis_results["story"] = story
+    logger.info("故事讲述完成。")
+
+    # 3.8 生成脑图
+    logger.info("步骤 9: 生成 Mermaid 脑图...")
+    mindmap = await mindmap_agent.generate_mindmap(
+        markdown_content,
+        callbacks=callbacks_list  # 传递回调
+    )
+    analysis_results["mindmap"] = mindmap
+    logger.info("Mermaid 脑图生成完成。")
+
     logger.info("所有处理步骤完成。")
+    token_callback_handler.log_total_usage()  # 在流程结束时记录总用量
     return analysis_results
-
-def generate_markdown_report(results: dict, pdf_filename_stem: str) -> str:
-    """Generates a Markdown report from the analysis results."""
-    md_content = f"# 文献分析报告: {pdf_filename_stem}\n\n"
-
-    # Metadata
-    md_content += "## 1. 文献元数据\n"
-    metadata = results.get("metadata", {})
-    if metadata:
-        md_content += f"- **标题:** {metadata.get('title', 'N/A')}\n"
-        md_content += f"- **作者:** {', '.join(metadata.get('authors', []))}\n"
-        md_content += f"- **DOI:** {metadata.get('doi', 'N/A')}\n"
-        md_content += f"- **发表日期:** {metadata.get('publication_date', 'N/A')}\n"
-        md_content += f"- **期刊/来源:** {metadata.get('journal_name', 'N/A')}\n"
-        
-        s2_info = metadata.get("s2_info", {})
-        if s2_info:
-            md_content += "\n### Semantic Scholar 信息:\n"
-            md_content += f"- Paper ID: {s2_info.get('paperId', 'N/A')}\n"
-            s2_abstract = s2_info.get('abstract')
-            md_content += f"- 摘要: {s2_abstract[:300] + '...' if s2_abstract else 'N/A'}\n"
-            md_content += f"- 被引次数: {s2_info.get('citationCount', 'N/A')}\n"
-
-        pubmed_info = metadata.get("pubmed_info", {})
-        if pubmed_info:
-            md_content += "\n### PubMed 信息:\n"
-            md_content += f"- PMID: {pubmed_info.get('pmid', 'N/A')}\n"
-            pubmed_abstract = pubmed_info.get('abstract')
-            md_content += f"- 摘要: {pubmed_abstract[:300] + '...' if pubmed_abstract else 'N/A'}\n"
-    else:
-        md_content += "未找到元数据。\n"
-    md_content += "\n"
-
-    # Methodology Analysis
-    md_content += "## 2. 方法学分析\n"
-    methodology = results.get("methodology_analysis", {})
-    if methodology:
-        md_content += f"- **方法类型:** {methodology.get('method_type', 'N/A')}\n"
-        md_content += f"- **关键技术:** {', '.join(methodology.get('key_techniques', [])) if isinstance(methodology.get('key_techniques'), list) else methodology.get('key_techniques', 'N/A')}\n"
-        md_content += f"- **数据来源:** {methodology.get('data_source', 'N/A')}\n"
-        md_content += f"- **样本量描述:** {methodology.get('sample_size_description', 'N/A')}\n"
-        md_content += f"- **方法优点:** {methodology.get('method_strengths', 'N/A')}\n"
-        md_content += f"- **方法局限性:** {methodology.get('method_limitations', 'N/A')}\n"
-        md_content += f"- **方法创新点:** {methodology.get('innovative_aspects_in_method', 'N/A')}\n"
-    else:
-        md_content += "未进行方法学分析或无结果。\n"
-    md_content += "\n"
-
-    # Innovation Extraction
-    md_content += "## 3. 创新点提取\n"
-    innovations = results.get("innovation_extraction", {})
-    if innovations:
-        md_content += f"- **核心创新点:**\n"
-        core_innovations = innovations.get('core_innovations', [])
-        if isinstance(core_innovations, list):
-            for inn in core_innovations:
-                md_content += f"  - {inn}\n"
-        else:
-            md_content += f"  - {core_innovations}\n" # if it's a single string
-        md_content += f"- **解决的问题:** {innovations.get('problem_solved', 'N/A')}\n"
-        md_content += f"- **与现有工作相比的新颖性:** {innovations.get('novelty_compared_to_existing_work', 'N/A')}\n"
-        md_content += f"- **潜在应用:**\n"
-        potential_apps = innovations.get('potential_applications', [])
-        if isinstance(potential_apps, list):
-            for app in potential_apps:
-                md_content += f"  - {app}\n"
-        else:
-            md_content += f"  - {potential_apps}\n"
-        md_content += f"- **未来研究方向:**\n"
-        future_dirs = innovations.get('future_research_directions_suggested', [])
-        if isinstance(future_dirs, list):
-            for fut_dir in future_dirs:
-                md_content += f"  - {fut_dir}\n"
-        else:
-            md_content += f"  - {future_dirs}\n"
-    else:
-        md_content += "未进行创新点提取或无结果。\n"
-    md_content += "\n"
-
-    # Q&A Pairs
-    md_content += "## 4. 问答对\n"
-    qa_pairs = results.get("qa_pairs", [])
-    if qa_pairs:
-        for i, pair in enumerate(qa_pairs):
-            md_content += f"**Q{i+1}:** {pair.get('question', 'N/A')}\n"
-            md_content += f"**A{i+1}:** {pair.get('answer', 'N/A')}\n\n"
-    else:
-        md_content += "未能生成问答对。\n"
-    
-    md_content += "\n---\n报告生成时间: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n"
-    return md_content
 
 def save_csv_report(data: list, filepath: Path, fieldnames: list):
     """Saves data to a CSV file."""
@@ -220,7 +181,7 @@ def save_csv_report(data: list, filepath: Path, fieldnames: list):
 
 def save_report(results: dict, pdf_path: str):
     """
-    将分析结果保存为JSON、Markdown和相关的CSV报告。
+    将分析结果保存为Markdown和相关的CSV报告。
     """
     if not results:
         logger.warning("没有结果可保存。")
@@ -229,7 +190,7 @@ def save_report(results: dict, pdf_path: str):
     pdf_filename_stem = Path(pdf_path).stem
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    output_subdir = Path(config.OUTPUT_BASE_DIR) / pdf_filename_stem
+    output_subdir = Path(config.settings.OUTPUT_BASE_DIR) / pdf_filename_stem
     output_subdir.mkdir(parents=True, exist_ok=True)
     
     # 定义统一的CSV列名，确保信息全面且一致
@@ -238,24 +199,14 @@ def save_report(results: dict, pdf_path: str):
         'pmid', 'pmid_link', 'pmcid', 'pmcid_link', 'citation_count', 's2_paper_id'
     ]
     
-    # 1. 保存原始JSON报告
-    json_report_filename = f"{pdf_filename_stem}_analysis_report_{timestamp}.json"
-    json_report_filepath = output_subdir / json_report_filename
-    try:
-        with open(json_report_filepath, 'w', encoding='utf-8') as f:
-            json.dump(results, f, ensure_ascii=False, indent=4)
-        logger.info(f"JSON分析报告已保存到: {json_report_filepath}")
-    except Exception as e:
-        logger.error(f"保存JSON报告失败: {e}")
-
-    # 2. 生成并保存Markdown报告
-    md_report_content = generate_markdown_report(results, pdf_filename_stem)
+    # 1. 生成并保存增强版Markdown报告
+    md_report_content = generate_enhanced_report(results, pdf_filename_stem)
     md_report_filename = f"{pdf_filename_stem}_analysis_report_{timestamp}.md"
     md_report_filepath = output_subdir / md_report_filename
     try:
         with open(md_report_filepath, 'w', encoding='utf-8') as f:
             f.write(md_report_content)
-        logger.info(f"Markdown分析报告已保存到: {md_report_filepath}")
+        logger.info(f"增强版Markdown分析报告已保存到: {md_report_filepath}")
     except Exception as e:
         logger.error(f"保存Markdown报告失败: {e}")
 
@@ -303,9 +254,9 @@ async def main_async():
     parser.add_argument("--pdf", type=str, help="要分析的PDF文件路径。")
     args = parser.parse_args()
 
-    pdf_to_process = args.pdf if args.pdf else config.DEFAULT_PDF_PATH
-    article_doi_to_process = config.ARTICLE_DOI
-    ncbi_email_for_requests = config.NCBI_EMAIL
+    pdf_to_process = args.pdf if args.pdf else config.settings.DEFAULT_PDF_PATH
+    article_doi_to_process = config.settings.ARTICLE_DOI
+    ncbi_email_for_requests = config.settings.NCBI_EMAIL
 
     if not Path(pdf_to_process).exists():
         logger.error(f"指定的PDF文件不存在: {pdf_to_process}")

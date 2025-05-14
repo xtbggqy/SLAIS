@@ -1,7 +1,7 @@
 # SLAIS 项目进展文档
 
-**版本：** 0.1 (初始文档)
-**更新日期：** {{env:SYSTEM_DATE}}
+**版本：** 0.3 (更新于2025-05-15)
+**上次更新日期：** 2025-05-15
 
 ## 如何运行 (调用方式)
 
@@ -10,26 +10,32 @@
     *   必须设置以下变量：
         *   `ARTICLE_DOI="your_target_article_doi"`: 指定要分析的目标文献的DOI。
         *   `NCBI_EMAIL="your_email@example.com"`: 用于NCBI API请求的邮箱地址。
+        *   `OPENAI_API_KEY="your_openai_key"`: OpenAI API密钥，用于AI分析功能。
     *   可选配置：
         *   `SEMANTIC_SCHOLAR_API_KEY="your_s2_api_key"`: Semantic Scholar API密钥（推荐，以获得更高的请求速率）。
         *   `RELATED_ARTICLES_YEARS_BACK="5"`: 从PubMed获取相关文献时回溯的年限（默认为5年）。
+        *   `OPENAI_API_MODEL="gpt-4o"`: 指定使用的OpenAI模型（默认为gpt-4o）。
+        *   `OPENAI_API_BASE_URL="your_api_url"`: 可选的OpenAI API基础URL，用于使用兼容的替代API。
+        *   `OUTPUT_BASE_DIR="output"`: 输出目录的基础路径。
+        *   `MAX_CONTENT_CHARS_FOR_LLM=60000`: 传递给LLM的最大文本字符数。
+        *   `MAX_QUESTIONS_TO_GENERATE=30`: 生成的问题数量上限。
         *   其他API超时、重试次数等参数也可在 `slais/config.py` 中查看并按需在 `.env` 中覆盖。
 
 2.  **运行主程序**:
     *   打开终端，导航到项目根目录 (`d:/C/Documents/Program/Python_file/article/ont_article`)。
     *   执行命令:
         ```bash
-        python -m slais.main
+        python main.py
         ```
-    *   如果需要处理特定的本地PDF文件（而不是依赖配置中的 `DEFAULT_PDF_PATH`），可以使用 `-p` 或 `--pdf` 参数：
+    *   如果需要处理特定的本地PDF文件（而不是依赖配置中的 `DEFAULT_PDF_PATH`），可以使用 `--pdf` 参数：
         ```bash
-        python -m slais.main -p path/to/your/document.pdf
+        python main.py --pdf path/to/your/document.pdf
         ```
 
 3.  **查看输出**:
     *   程序的运行日志和主要信息会打印在控制台。
-    *   生成的Markdown文件会保存在 `output/<pdf_name_without_extension>/` 目录下。
-    *   包含详细文献信息的CSV报告会保存在 `output/csv_reports/` 目录下。
+    *   生成的Markdown报告会保存在 `output/<pdf_name_without_extension>/` 目录下。
+    *   参考文献和相关文章的CSV文件会保存在相同目录下。
 
 ---
 
@@ -37,32 +43,34 @@
 1.  项目结构与基本说明
 2.  项目详细说明
     *   `main.py` - 主程序入口
-    *   `config.py` - 配置管理
-    *   `pdf_utils.py` - PDF处理工具
-    *   `api_clients.py` - 外部API客户端
-    *   未来计划模块
+    *   `agents/` - 智能代理模块
+    *   `slais/` - 核心功能模块
+3.  主要功能流程
+4.  最新更新
+5.  未来计划
 
 ---
 
 ## 1. 项目结构与基本说明
 
-当前项目 (SLAIS) 旨在构建一个PDF文献智能分析与洞察系统。以下是当前已建立或规划的核心文件和目录结构及其基本说明：
+当前项目 (SLAIS) 已发展为一个完整的PDF文献智能分析与洞察系统。以下是当前已实现的核心文件和目录结构及其基本说明：
 
-*   `slais/` - 项目核心代码目录。
-    *   `__init__.py`: 标识 `slais` 目录为一个Python包。
-    *   `main.py`: 项目的主程序入口，负责协调整个分析流程。
-    *   `config.py`: 管理项目的所有配置项，如API密钥、文件路径、DOI等，主要从 `.env` 文件加载。
-    *   `pdf_utils.py`: 包含PDF处理相关的工具函数，核心功能是使用 `magic_pdf` 库将PDF转换为Markdown，并计划支持表格、图像提取等。
-    *   `api_clients.py`: 封装与外部API（如PubMed）交互的客户端。
-    *   `utils/`: 存放通用工具模块。
-        *   `logging_utils.py`: (已规划) 日志记录工具。
-    *   `analyzer.py`: (已规划) 内容分析模块，将使用AI模型进行文本分析。
-    *   `report_builder.py`: (已规划) 报告生成模块。
-    *   `cache_manager.py`: (已规划) 缓存管理模块。
-    *   `error_handler.py`: (已规划) 统一错误处理模块。
-*   `tests/`: (已规划) 存放单元测试和集成测试。
-*   `.env`: (项目根目录) 存储环境变量，如API密钥和特定配置（例如 `ARTICLE_DOI`）。
-*   `project.md`: 项目的综合设计与规范文档。
+*   `main.py`: 项目的主程序入口，协调整个分析流程。
+*   `agents/` - 智能代理模块。
+    *   `base_agent.py`: 基础代理类定义，提供公共功能。
+    *   `callbacks.py`: LLM调用的回调处理，用于追踪token使用和成本。
+    *   `formatting_utils.py`: 输出格式化工具，用于美化报告和修复Mermaid代码。
+    *   `llm_analysis_agent.py`: 多种LLM分析代理实现，包括方法学分析、创新点提取、问答生成等。
+    *   `metadata_fetching_agent.py`: 元数据获取代理，从外部API获取文献相关信息。
+    *   `pdf_parsing_agent.py`: PDF解析代理，负责从PDF文件提取结构化内容。
+    *   `prompts.py`: LLM提示模板定义。
+*   `slais/` - 核心功能模块。
+    *   `__init__.py`: 包初始化。
+    *   `config.py`: 配置管理，从.env文件加载环境变量。
+    *   `utils/`: 工具函数集合。
+        *   `logging_utils.py`: 日志工具，配置日志系统。
+*   `.env`: 存储环境变量，如API密钥和特定配置。
+*   `output/`: 输出目录，存放生成的报告和CSV文件。
 *   `PROGRESS.md`: 本项目进展文档。
 
 ---
@@ -71,131 +79,198 @@
 
 ### `main.py` - 主程序入口
 
-*   **当前状态：** 已实现基本框架。
+*   **当前状态：** 已实现完整功能。
 *   **功能：**
     *   作为命令行应用程序的入口点 (使用 `argparse` 解析参数)。
-    *   从 `slais.config` 模块获取配置，特别是 `ARTICLE_DOI` 和 `DEFAULT_PDF_PATH`。
-    *   **DOI处理**：直接从配置中读取 `ARTICLE_DOI`，不再从PDF中提取。
-    *   调用 `api_clients.PubMedClient` 根据DOI获取文献的标题和摘要。
-    *   调用 `pdf_utils.convert_pdf_to_markdown` 将指定的PDF文件转换为Markdown格式。
-    *   管理输出目录结构，将处理结果（如Markdown文件）保存到基于PDF文件名和 `OUTPUT_BASE_DIR` 配置的子目录中。
-    *   使用 `asyncio` 运行异步操作（如API调用）。
+    *   协调全文分析流水线的各个组件。
+    *   从 `.env` 文件获取配置，包括 `ARTICLE_DOI`、`OPENAI_API_KEY` 等。
+    *   管理异步工作流，使用 `asyncio` 并行处理各种任务。
+    *   生成并保存格式化的分析报告和相关CSV数据。
 
-### `config.py` - 配置管理
+### `agents/` - 智能代理模块
+
+#### `base_agent.py` - 基础代理类
 
 *   **当前状态：** 已实现。
 *   **功能：**
-    *   使用 `python-dotenv` 从项目根目录下的 `.env` 文件加载环境变量。
-    *   定义并提供对项目中所有配置参数的访问，例如：
-        *   `PUBMED_API_BASE_URL`
-        *   `OPENAI_API_KEY`, `OPENAI_API_MODEL` (已规划)
-        *   `PDF_INPUT_DIR`, `DEFAULT_PDF_PATH`
-        *   `ARTICLE_DOI` (核心配置，用于指定当前处理文献的DOI)
-        *   `OUTPUT_BASE_DIR`
-        *   `CACHE_DIR`, `CACHE_EXPIRY_DAYS` (已规划)
-        *   `LOG_LEVEL`, `LOG_FILE` (已规划)
-    *   包含 `ensure_directories()` 函数，用于在程序启动时创建必要的目录（如输出目录、缓存目录、日志目录）。
+    *   定义了 `ResearchAgent` 基类，为所有智能代理提供通用方法和属性。
+    *   包括 LLM 初始化、内容截断、LLM 链创建等功能。
+    *   提供统一的抽象接口，确保各个具体代理实现一致的行为模式。
 
-### `pdf_utils.py` - PDF处理工具
+#### `callbacks.py` - LLM回调处理
 
-*   **当前状态：** 核心Markdown转换功能已实现，其他功能部分实现或规划中。
+*   **当前状态：** 已实现。
 *   **功能：**
-    *   **`convert_pdf_to_markdown(pdf_path, output_dir)`**:
-        *   核心功能，使用 `magic_pdf` 库将PDF文件转换为Markdown。
-        *   支持 `magic_pdf` 的文本和OCR模式。
-        *   将生成的Markdown文件、图片（如果存在）、内容列表JSON和中间JSON保存到指定的输出目录。
-        *   之前版本中的DOI提取逻辑已移除。
-    *   **`extract_images(pdf_path, output_dir)`**:
-        *   从PDF中提取图像。当前实现依赖 `magic_pdf` 在转换过程中的图像保存，并列出输出目录中的图像文件。
-    *   **`extract_tables(pdf_path)`**:
-        *   从PDF中提取表格。当前实现为占位符，依赖 `magic_pdf` 的 `infer_result` 是否提供直接的表格对象和Markdown转换方法。需要进一步验证 `magic_pdf` 的具体API。
-    *   **公式识别 (`detect_equations`)**: (已规划，见 `project.md`) 计划使用 `magic_pdf` 识别和格式化公式。
+    *   实现 `TokenUsageCallbackHandler`，用于追踪 LLM API 调用的 token 使用情况。
+    *   计算各种 OpenAI 模型的 API 调用成本。
+    *   提供详细的 token 消耗和成本日志。
 
-### `api_clients.py` - 外部API客户端 (已分割和重构)
-
-*   **当前状态：** 原 `api_clients.py` 已被分割为 `pubmed_client.py` 和 `semantic_scholar_client.py`。
-*   旧的 `slais/api_clients.py` 文件已被清空并标记为弃用。
-
-### `pubmed_client.py` - PubMed API 客户端
+#### `formatting_utils.py` - 输出格式化工具
 
 *   **当前状态：** 已实现。
-*   **`PubMedClient`**:
-    *   `get_article_details(doi, email)`: 异步方法，根据DOI获取单篇PubMed文章的详细信息（包括标题、作者、期刊、发表日期、PMID、PMCID、摘要等）。
-    *   `get_article_details_by_pmid(pmid, email)`: 新增异步方法，根据PMID获取单篇PubMed文章的详细信息。
-    *   `get_related_articles(initial_pmid, email)`: 异步方法，获取与指定PMID文章相关的文献列表。相关文献的回溯年限可通过 `.env` 文件配置 (`RELATED_ARTICLES_YEARS_BACK`)。
-    *   `batch_get_article_details_by_dois(dois, email)`: 新增异步方法，通过一批DOI批量获取文章详情。内部首先并发地将DOI转换为PMID（使用 `asyncio.Semaphore` 和延迟控制速率），然后批量通过PMID使用`efetch`获取详情。
-    *   `batch_get_article_details_by_pmids(pmids, email)`: 新增异步方法，通过一批PMID批量获取文章详情。
-    *   **速率控制与错误处理**:
-        *   使用 `tenacity` 实现重试逻辑。
-        *   在并发DOI到PMID转换时使用 `asyncio.Semaphore` 和固定延迟来控制请求速率，以减少HTTP 429错误。
-        *   增加了 `httpx` 客户端的默认超时时间。
+*   **功能：**
+    *   提供 Mermaid 脑图代码的格式化和修复功能。
+    *   实现高级 Markdown 报告生成器，支持折叠区域、表格和样式美化。
+    *   包含问答对格式化、方法学分析格式化等专用函数。
+    *   提供合理的错误处理和默认内容生成。
 
-### `semantic_scholar_client.py` - Semantic Scholar API 客户端
+#### `llm_analysis_agent.py` - LLM分析代理
+
+*   **当前状态：** 已实现多种具体代理。
+*   **功能：**
+    *   `MethodologyAnalysisAgent`: 分析研究方法、关键技术、优缺点等。
+    *   `InnovationExtractionAgent`: 提取文献的核心创新点、解决的问题和应用前景。
+    *   `QAGenerationAgent`: 生成与文献相关的问题，并批量提供详细答案。
+    *   `StorytellingAgent`: 以叙事方式解释研究内容，使其更易理解。
+    *   `MindMapAgent`: 生成文献内容的结构化思维导图。
+
+#### `metadata_fetching_agent.py` - 元数据获取代理
 
 *   **当前状态：** 已实现。
-*   **`SemanticScholarClient`**:
-    *   `get_paper_details_by_doi(doi)`: 异步方法，根据DOI获取单篇论文的Semantic Scholar详细信息（包括S2 PaperID、标题、作者、摘要、年份、引用数、参考文献数、`externalIds`等）。
-    *   `batch_get_paper_details_by_dois(dois)`: 新增异步方法，通过一批DOI批量从Semantic Scholar获取论文的详细信息，使用 `/paper/batch` 端点。
-    *   `get_references_by_paper_id(paper_id)`: 异步方法，根据S2 PaperID获取该论文的参考文献DOI列表（目前获取第一页，最多1000条）。
-    *   **速率控制与错误处理**:
-        *   集成了令牌桶 (`TokenBucket`) 机制，根据是否有API Key（`SEMANTIC_SCHOLAR_API_KEY`）调整请求速率。
-        *   包含重试和指数退避逻辑。
-        *   使用 `aiohttp` 进行异步HTTP请求。
+*   **功能：**
+    *   封装与外部 API（如 PubMed、Semantic Scholar）的交互。
+    *   获取文献的元数据，包括标题、作者、摘要等。
+    *   获取文献的参考文献和相关文章。
+    *   实现请求速率限制和错误处理。
 
-### `main.py` - 主程序入口 (已更新)
+#### `pdf_parsing_agent.py` - PDF解析代理
 
-*   **当前状态：** 功能大幅扩展。
-*   **核心数据获取流程：**
-    1.  **原始文章信息**：
-        *   优先从 `SemanticScholarClient` 获取原始文章的详细信息。
-        *   如果S2返回PMID，则调用 `PubMedClient` 通过PMID补充或核实信息。若S2无PMID，则尝试用DOI从PubMed获取。
-    2.  **PubMed 相关文献**：
-        *   如果获取到原始文章的PMID，则调用 `PubMedClient` 获取PubMed计算的相关文献列表。
-    3.  **Semantic Scholar 参考文献**：
-        *   如果获取到原始文章的S2 PaperID，则调用 `SemanticScholarClient` 获取参考文献的DOI列表。
-        *   使用这些DOI，批量调用 `SemanticScholarClient` 获取这些参考文献的S2详细信息。
-        *   从S2参考文献详情中提取PMID，然后批量调用 `PubMedClient` 获取这些参考文献的PubMed补充信息。
-*   **CSV 输出**：
-    *   将收集到的所有信息（原始文章的S2和PubMed信息、PubMed相关文献、S2参考文献的S2和PubMed信息）输出到一个统一的CSV文件 (`*_full_report.csv`)。
-    *   CSV文件包含详细字段，并有 "DataSource" 列标明信息来源。
-*   **配置**：
-    *   从 `config.py`（进而从 `.env`）读取 `ARTICLE_DOI`, `NCBI_EMAIL`, `RELATED_ARTICLES_YEARS_BACK`, `SEMANTIC_SCHOLAR_API_KEY` 等配置。
-*   **错误修复**：
-    *   已修复之前日志中报告的 `TypeError` (处理作者列表时) 和缩进问题。
+*   **当前状态：** 已实现。
+*   **功能：**
+    *   从PDF文件提取结构化文本内容。
+    *   处理表格、图片等非文本元素。
+    *   将提取的内容转换为 Markdown 格式，便于后续分析。
 
-### 未来计划模块
+#### `prompts.py` - LLM提示模板
 
-根据 `project.md`，以下模块是项目后续开发的核心组成部分：
+*   **当前状态：** 已实现。
+*   **功能：**
+    *   定义用于各种分析任务的 LLM 提示模板。
+    *   包括方法学分析、创新点提取、问答生成、故事讲述和思维导图生成的模板。
+    *   提供结构化的输出指导，确保 LLM 生成符合预期格式的内容。
 
-*   **`analyzer.py` (内容分析器):**
-    *   利用 `OpenAIClient` 对从PDF提取的Markdown内容和PubMed摘要进行深度分析。
-    *   提取核心信息（研究目的、方法、创新点等）。
-    *   生成问答对。
-    *   分析创新点与不足。
-    *   计划使用 `pydantic` 定义数据结构，使用NLP库（如`spacy`, `nltk`）进行预处理，并可能生成可视化内容。
+### `slais/` - 核心功能模块
 
-*   **`report_builder.py` (报告生成器):**
-    *   根据分析结果生成多种格式的报告。
-    *   HTML报告 (使用 `Jinja2`，可能集成CSS框架如Tailwind CSS和交互库如Alpine.js)。
-    *   PDF报告 (可能使用 `weasyprint`)。
-    *   演示文稿 (可能使用 `python-pptx`)。
-    *   JSON数据导出。
+#### `config.py` - 配置管理
 
-*   **`cache_manager.py` (缓存管理器):**
-    *   实现API响应和分析结果的缓存，以提高性能和减少外部调用。
-    *   计划使用 `diskcache` 或 `joblib` 进行持久化缓存。
+*   **当前状态：** 已实现。
+*   **功能：**
+    *   使用 `python-dotenv` 从 `.env` 文件加载环境变量。
+    *   提供对项目所有配置参数的访问。
+    *   确保必要的目录结构存在。
 
-*   **`error_handler.py` (错误处理器):**
-    *   集中管理错误处理逻辑。
-    *   配置高级日志系统 (如 `loguru`)。
+#### `pubmed_client.py` - PubMed API 客户端
 
-*   **`utils/logging_utils.py` 和 `utils/file_utils.py`:**
-    *   提供通用的日志和文件操作辅助函数。
+*   **当前状态：** 已实现并优化
+*   **功能：**
+    *   实现与 PubMed API 的异步通信
+    *   获取文献元数据和相关文章
+    *   使用多种方法提取文献 DOI（通过 PubMed XML 和 CrossRef API）
+    *   处理批量请求和并发操作
+    *   实现智能错误处理和重试机制
+    *   提供灵活的配置选项，如搜索年限和最大结果数
 
-*   **`tests/` (测试套件):**
-    *   全面的单元测试和集成测试，使用 `pytest`。
-    *   模拟外部依赖，确保测试的可靠性和速度。
+#### `utils/logging_utils.py` - 日志工具
 
-该文档将随着项目的进展定期更新。
+*   **当前状态：** 已实现。
+*   **功能：**
+    *   配置统一的日志系统。
+    *   提供不同级别的日志记录功能。
+    *   设置日志格式和输出目的地。
 
-Python -m slais.main
+---
+
+## 3. 主要功能流程
+
+当前版本的 SLAIS 系统实现了一个完整的文献分析流水线，包括以下主要步骤：
+
+1. **PDF内容提取**：从指定的PDF文件中提取文本内容，转换为Markdown格式。
+2. **元数据获取**：通过DOI从PubMed和Semantic Scholar获取文献的基本信息。
+3. **方法学分析**：分析研究方法、关键技术、数据来源等，评估其优缺点和创新性。
+4. **创新点提取**：识别并提取文献的核心创新贡献、解决的问题和潜在应用。
+5. **问答生成**：根据文献内容生成一系列问题，并提供详细答案，帮助理解关键概念。
+6. **参考文献获取**：获取文献引用的其他论文信息，构建知识网络。
+7. **相关文章检索**：从PubMed获取与当前文献相关的其他研究。
+8. **故事化讲述**：将技术内容以易于理解的叙事方式重新表述。
+9. **思维导图生成**：创建可视化的结构图，展示文献的逻辑组织。
+10. **报告生成**：将所有分析结果整合为一个美观、结构化的Markdown报告。
+
+系统现已支持异步操作和并行处理，大大提高了处理效率，特别是在处理大型文献或批量获取参考文献信息时。
+
+---
+
+## 4. 最新更新
+
+### 2025-05-15：增强 DOI 提取机制
+
+*   **PubMed 客户端 DOI 提取改进**:
+    *   增强了 `parse_pubmed_article` 函数以从多个 XML 元素位置提取 DOI:
+        *   PubmedData/ArticleIdList
+        *   Article/ELocationID
+        *   Article/ArticleIdList
+    *   添加了 `_get_doi_from_pmid_crossref` 异步方法作为备用 DOI 获取机制
+    *   实现了批量并行 DOI 查询以提高效率
+    
+*   **CrossRef API 集成**:
+    *   添加了与 CrossRef API 的集成，用作 PubMed 未提供 DOI 时的备用数据源
+    *   使用 `httpx` 实现异步请求处理
+    *   实现了智能错误处理和日志记录
+    
+*   **类型系统优化**:
+    *   在 `ArticleDetails` TypedDict 中添加了 `doi` 字段
+    *   改进了代码中的类型注解以增强类型安全性
+    
+*   **异步性能优化**:
+    *   使用 `asyncio.gather` 实现批量并行 DOI 查询
+    *   优化了异步上下文管理器的使用
+    *   改进了请求流程以减少 API 调用次数
+
+### 2025-05-10：配置扩展
+
+*   **可配置问题生成**:
+    *   在 QA_GENERATION_PROMPT 中使用 `{num_questions}` 占位符
+    *   通过 `.env` 中的 MAX_QUESTIONS_TO_GENERATE 参数控制生成问题数量
+    *   更新了相关代理以支持可配置的问题数量
+
+---
+
+## 5. 未来计划
+
+1. **数据整合增强**:
+   * 整合更多学术数据源 (如 Dimensions, OpenAlex)
+   * 实现引用网络分析和可视化
+   * 添加引文指标分析功能
+
+2. **用户界面改进**:
+   * 开发简单的 Web 界面，使非技术用户更容易使用系统
+   * 添加进度指示器和实时反馈
+   * 提供可交互的报告查看体验
+
+3. **分析能力增强**:
+   * 实现跨文献比较分析
+   * 添加时间趋势分析和研究热点识别
+   * 引入文献质量评估标准
+
+4. **批量处理能力**:
+   * 支持一次分析多篇文献，生成综合报告
+   * 实现定期自动分析特定领域的新发表文献
+   * 添加基于主题的文献分组和归类
+
+5. **多语言支持**:
+   * 添加对非英语文献的支持
+   * 提供多语言报告生成选项
+   * 实现跨语言文献比较
+
+6. **性能与可靠性优化**:
+   * 改进缓存策略，减少重复 API 调用
+   * 优化大型文献的处理效率
+   * 增强错误恢复和断点续传能力
+   * 添加分布式处理支持，提高大批量分析效率
+
+7. **数据质量改进**:
+   * 实现更智能的 DOI 和元数据补全算法
+   * 添加文献数据清洗和规范化流程
+   * 开发重复和冲突数据检测机制
+
+---
+*最后更新: 2025-05-15*

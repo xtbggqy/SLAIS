@@ -10,8 +10,18 @@ class MetadataFetchingAgent:
         self.s2_client = SemanticScholarClient()
 
     async def fetch_metadata(self, doi: str, email: str) -> Dict[str, Any]:
+        """
+        获取文章的元数据，包括PubMed和Semantic Scholar信息。
+        """
+        metadata = {"pubmed_info": None, "s2_info": None}
+
+        # 从PubMed获取信息
+        try:
+            metadata["pubmed_info"] = await self.pubmed_client.get_article_details(doi, email)  # 修正方法名
+        except Exception as e:
+            logger.error(f"[MetadataFetchingAgent] 从PubMed获取元数据时出错: {e}")
+
         original_s2_info: Optional[Dict[str, Any]] = None
-        original_pubmed_info: Optional[ArticleDetails] = None
 
         logger.info(f"从配置中获取的DOI: {doi}")
         logger.info(f"从配置中获取的邮箱: {email}")
@@ -28,30 +38,30 @@ class MetadataFetchingAgent:
 
             if pmid_from_s2:
                 logger.info(f"S2提供了PMID: {pmid_from_s2}。正在从PubMed获取/核实...")
-                original_pubmed_info = await self.pubmed_client.get_article_details_by_pmid(pmid_from_s2, email)
-                if original_pubmed_info:
-                    logger.info(f"成功从PubMed获取PMID {pmid_from_s2} 的信息。")
+                # 如果从S2获得了PMID，直接使用PMID获取PubMed详情
+                pubmed_info_s2_pmid = await self.pubmed_client.get_article_details_by_pmid(pmid_from_s2, email)
+                if pubmed_info_s2_pmid:
+                    metadata["pubmed_info"] = pubmed_info_s2_pmid
                 else:
                     logger.warning(f"未能从PubMed获取PMID {pmid_from_s2} 的信息，将主要依赖S2数据。")
             else:
-                logger.info(f"S2未提供PMID。尝试用DOI从PubMed获取原始文章信息...")
-                original_pubmed_info = await self.pubmed_client.get_article_details(doi, email)
-                if original_pubmed_info:
-                    logger.info(f"成功从PubMed获取DOI {doi} 的信息 (PMID: {original_pubmed_info.get('pmid')})。")
+                # S2没有提供PMID，尝试使用原始DOI从PubMed获取
+                logger.info("S2未提供PMID。尝试使用原始DOI从PubMed获取信息...")
+                pubmed_info_direct_doi = await self.pubmed_client.get_article_details(doi, email)
+                if pubmed_info_direct_doi:
+                    metadata["pubmed_info"] = pubmed_info_direct_doi
                 else:
-                    logger.warning(f"也未能从PubMed通过DOI获取原始文章信息。")
-        else:
-            logger.warning(f"未能从S2获取原始文章信息。尝试直接从PubMed获取...")
-            original_pubmed_info = await self.pubmed_client.get_article_details(doi, email)
-            if original_pubmed_info:
-                logger.info(f"成功从PubMed获取DOI {doi} 的信息 (PMID: {original_pubmed_info.get('pmid')})。")
+                    logger.warning(f"也未能通过原始DOI {doi} 从PubMed获取信息。")
+        else: # S2未能获取信息
+            logger.warning(f"未能从S2获取原始文章信息。尝试直接从PubMed获取 (使用原始DOI: {doi})...")
+            pubmed_info_direct_doi = await self.pubmed_client.get_article_details(doi, email)
+            if pubmed_info_direct_doi:
+                metadata["pubmed_info"] = pubmed_info_direct_doi
             else:
-                logger.error(f"也未能从PubMed通过DOI获取原始文章信息。处理可能无法继续。")
+                logger.error(f"从S2和PubMed均未能获取DOI {doi} 的元数据。")
 
-        metadata = {
-            "s2_info": original_s2_info,
-            "pubmed_info": original_pubmed_info
-        }
+        metadata["s2_info"] = original_s2_info
+        logger.info("元数据获取完成。")
         return metadata
         
     async def fetch_related_articles(self, pmid: str, email: Optional[str] = None) -> List[Dict[str, Any]]:

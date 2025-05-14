@@ -99,8 +99,11 @@ class SemanticScholarClient:
                 else: logger.error(f"[S2] 获取DOI {doi} 的信息失败，达到最大重试次数。"); return None
             except Exception as e:
                 logger.exception(f"[S2] 获取DOI {doi} 的信息时发生意外错误 (尝试 {attempt+1}/{self.retry_count}): {e}")
-                if attempt < self.retry_count - 1: await asyncio.sleep(self._exponential_backoff(attempt))
-                else: return None
+                if attempt < self.retry_count - 1: 
+                    await asyncio.sleep(self._exponential_backoff(attempt)) # 添加缺失的等待
+                else:
+                    logger.error(f"[S2] 获取DOI {doi} 的信息时发生意外错误，达到最大重试次数。") # 添加错误日志
+                    return None # 返回None
         return None
 
     async def batch_get_paper_details_by_dois(self, dois: List[str]) -> Dict[str, Optional[Dict[str, Any]]]:

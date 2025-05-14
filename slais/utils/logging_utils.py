@@ -3,10 +3,28 @@ import sys
 import os
 import datetime
 import re
-from ..config import LOG_LEVEL, LOG_FILE, ensure_directories
+import errno
+
+# 从 ..config 导入配置变量
+from ..config import LOG_LEVEL, LOG_DIR, LOG_FILE
+
+# 在此处定义 ensure_directories 函数
+def ensure_directories(paths: list):
+    """
+    确保指定的目录列表存在，如果不存在则创建它们。
+    """
+    for path in paths:
+        if path:  # 确保路径不是空的或None
+            try:
+                os.makedirs(path, exist_ok=True)
+                print(f"INFO: 已确保目录存在: {path}")
+            except OSError as e:
+                if e.errno != errno.EEXIST: # 忽略目录已存在的错误
+                    print(f"ERROR: 创建目录 {path} 时出错: {e}")
+                    raise
 
 # 确保日志目录存在
-ensure_directories()
+ensure_directories([LOG_DIR])
 
 # 创建一个日志过滤器，用于过滤掉不需要的日志
 class LogFilter(logging.Filter):
@@ -78,8 +96,8 @@ log_filter = LogFilter()
 
 def setup_logging():
     """配置并激活日志记录器，包括处理器和格式化器。"""
-    # 确保日志目录存在 (config.py中已调用，这里可以再次确认或移除)
-    # ensure_directories() # 如果config.py导入时已确保，这里可能多余
+    # 确保日志目录存在
+    ensure_directories([LOG_DIR])
 
     logger.addFilter(log_filter)
 

@@ -1,0 +1,25 @@
+2025-05-15 00:13:33,734 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250515_001329.log
+2025-05-15 00:13:33,736 - slais_app - INFO - 开始处理文章，PDF路径: pdfs/darwin.pdf, DOI: 10.1126/science.aao4593
+2025-05-15 00:13:35,050 - slais_app - INFO - OpenAI LLM客户端初始化完成。模型: qwen-turbo
+2025-05-15 00:13:35,050 - slais_app - WARNING - 模型 'qwen-turbo' 或基础模型 'qwen' 的Tiktoken编码器未找到。 将使用 'cl100k_base' 作为备用。Token数可能为近似值。
+2025-05-15 00:13:35,211 - slais_app - INFO - PubMedClient initialized. Email: tts@gmail.com, API_KEY_PROVIDED: False
+2025-05-15 00:13:35,213 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
+2025-05-15 00:13:35,213 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
+2025-05-15 00:13:35,213 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
+2025-05-15 00:13:35,214 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
+2025-05-15 00:13:35,214 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
+2025-05-15 00:13:35,215 - slais_app - INFO - 步骤 1: 解析PDF内容...
+2025-05-15 00:13:35,215 - slais_app - INFO - 开始解析PDF文件: pdfs/darwin.pdf
+2025-05-15 00:13:35,215 - slais_app - INFO - 找到已存在的Markdown文件: output\darwin\darwin_markdown\darwin.md。将直接读取此文件。
+2025-05-15 00:13:35,216 - slais_app - INFO - 成功读取已存在的Markdown文件内容，长度: 23707。
+2025-05-15 00:13:35,216 - slais_app - INFO - PDF内容提取完成，Markdown长度: 23707
+2025-05-15 00:13:35,216 - slais_app - INFO - 步骤 2: 获取元数据...
+2025-05-15 00:13:35,216 - slais_app - INFO - [PubMedClient] 正在通过DOI '10.1126/science.aao4593' 获取PMID...
+2025-05-15 00:13:36,853 - slais_app - WARNING - [PubMedClient] 未找到DOI '10.1126/science.aao4593' 对应的PMID。ESearch响应: {'header': {'type': 'esearch', 'version': '0.3'}, 'esearchresult': {'count': '0', 'retmax': '0', 'retstart': '0', 'idlist': [], 'translationset': [], 'querytranslation': '(10.1126%2Fscience.aao4593[DOI]) OR (10.1126%2Fscience.aao4593[LID])', 'errorlist': {'phrasesnotfound': ['2Fscience.aao4593'], 'fieldsnotfound': []}, 'warninglist': {'phrasesignored': [], 'quotedphrasesnotfound': [], 'outputmessages': ['%', 'No items found.']}}}
+2025-05-15 00:13:36,855 - slais_app - WARNING - [PubMedClient] 无法通过DOI 10.1126/science.aao4593 获取PMID。
+2025-05-15 00:13:36,856 - slais_app - INFO - 从配置中获取的DOI: 10.1126/science.aao4593
+2025-05-15 00:13:36,856 - slais_app - INFO - 从配置中获取的邮箱: tts@gmail.com
+2025-05-15 00:13:36,856 - slais_app - INFO - 正在从 Semantic Scholar 获取原始文章 (DOI: 10.1126/science.aao4593) 的信息...
+2025-05-15 00:13:39,772 - slais_app - INFO - [S2] 成功获取DOI 10.1126/science.aao4593 的信息 (PaperID: 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1)。
+2025-05-15 00:13:39,773 - slais_app - INFO - 成功从S2获取原始文章信息 (S2 PaperID: 7fdd3e56f266c3532ada0d01ba0dba9b7cb61de1)
+2025-05-15 00:13:39,773 - slais_app - INFO - S2提供了PMID: 29170277。正在从PubMed获取/核实...

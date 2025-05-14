@@ -23,29 +23,41 @@ class PDFParsingAgent:
         pdf_filename = os.path.basename(pdf_path)
         pdf_name_without_ext = os.path.splitext(pdf_filename)[0]
         
-        # 创建最终输出目录
-        output_dir = os.path.join(config.OUTPUT_BASE_DIR, pdf_name_without_ext)
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-        
-        # 调用转换功能，直接指定最终输出目录
-        md_file_path = await convert_pdf_to_markdown(pdf_path, output_dir=output_dir)
-        
-        # 如果返回的是文件路径，读取文件内容
-        if md_file_path and os.path.isfile(md_file_path):
+        # 构建预期的Markdown文件输出路径
+        output_dir = Path(config.OUTPUT_BASE_DIR) / pdf_name_without_ext
+        markdown_dir = output_dir / f"{pdf_name_without_ext}_markdown"
+        expected_md_filepath = markdown_dir / f"{pdf_name_without_ext}.md"
+
+        # 检查是否已存在Markdown文件
+        if expected_md_filepath.exists() and expected_md_filepath.is_file():
+            logger.info(f"找到已存在的Markdown文件: {expected_md_filepath}。将直接读取此文件。")
             try:
-                with open(md_file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                logger.info(f"PDF解析完成，内容长度: {len(content)} 字符")
-                return content
+                with open(expected_md_filepath, 'r', encoding='utf-8') as f:
+                    markdown_content = f.read()
+                logger.info(f"成功读取已存在的Markdown文件内容，长度: {len(markdown_content)}。")
+                return markdown_content
             except Exception as e:
-                logger.error(f"读取Markdown文件失败: {e}")
-                return ""
+                logger.error(f"读取已存在的Markdown文件 {expected_md_filepath} 失败: {e}。将尝试重新转换PDF。")
         else:
-            # 如果convert_pdf_to_markdown直接返回了内容字符串而不是路径
-            # (基于旧的 pdf_parsing_agent.py 逻辑，但 convert_pdf_to_markdown 现在应返回路径)
-            if isinstance(md_file_path, str) and len(md_file_path) > 100:  # 假设内容长度>100是文本内容
-                logger.info(f"PDF解析完成，内容长度: {len(md_file_path)} 字符")
-                return md_file_path
+            logger.info(f"未找到预期的Markdown文件 {expected_md_filepath} 或它不是一个文件。将执行PDF转换。")
+
+        # 创建最终输出目录
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+        try:
+            # 调用转换功能，直接指定最终输出目录
+            md_file_path = await convert_pdf_to_markdown(pdf_path, output_dir=output_dir)
+            
+            if md_file_path and Path(md_file_path).exists():
+                with open(md_file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                logger.info(f"PDF内容成功转换为Markdown，并已读取。路径: {md_file_path}, 长度: {len(content)}")
+                return content
             else:
-                logger.warning("PDF转换未返回有效的Markdown文件内容或路径")
+                logger.error(f"PDF转换为Markdown失败或未返回有效路径: {md_file_path}")
                 return ""
+        except Exception as e:
+            logger.error(f"从PDF '{pdf_path}' 提取内容时发生错误: {e}")
+            import traceback
+            logger.debug(f"错误详情: {traceback.format_exc()}")
+            return ""

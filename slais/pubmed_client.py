@@ -5,7 +5,9 @@ import xml.etree.ElementTree as ET # 用于解析XML
 import re   # 用于正则表达式处理
 import math # 用于向上取整除法
 import asyncio # 用于异步休眠
-from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
+import anyio # 添加 anyio 导入
+import random # 添加 random 导入
+from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log, retry_if_exception_type
 import logging
 from typing import List, Optional, Dict, Any, TypedDict # 导入 TypedDict
 from datetime import datetime, timedelta # 用于日期处理
@@ -25,6 +27,7 @@ class ArticleDetails(TypedDict): # PubMed 文章详情
     pmcid: Optional[str]
     pmcid_link: Optional[str]
     abstract: Optional[str]
+    doi: Optional[str]  # 新增 DOI 字段
 
 class Output(TypedDict): # 主要用于描述PubMedClient的输出结构
     original_article: Optional[ArticleDetails]
@@ -46,6 +49,7 @@ def parse_pubmed_article(article_xml: ET.Element) -> Optional[ArticleDetails]:
         return None
 
     pmid = None 
+    doi_val = None  # 初始化 DOI 变量
     try:
         medline_citation = article_xml.find("./MedlineCitation")
         pubmed_data = article_xml.find("./PubmedData")
@@ -58,6 +62,31 @@ def parse_pubmed_article(article_xml: ET.Element) -> Optional[ArticleDetails]:
 
         if article is None or pmid is None:
              return None 
+
+        # 尝试从 PubmedData 的 ArticleIdList 中提取 DOI
+        if pubmed_data is not None:
+            doi_element = pubmed_data.find("./ArticleIdList/ArticleId[@IdType='doi']")
+            if doi_element is not None and doi_element.text:
+                doi_val = doi_element.text.strip()
+
+        # 如果在 PubmedData 中没找到 DOI，尝试从 Article 的 ELocationID 中提取
+        if not doi_val and article is not None:
+            elocation_elements = article.findall("./ELocationID")
+            for eloc_id in elocation_elements:
+                if eloc_id.get("EIdType") == "doi" and eloc_id.get("ValidYN", "Y").upper() == "Y":
+                    if eloc_id.text:
+                        doi_val = eloc_id.text.strip()
+                        break
+
+        # 如果仍未找到 DOI，尝试从 Article 的 ArticleIdList 中提取（有些 XML 结构可能在这里存放）
+        if not doi_val and article is not None:
+            article_id_list = article.find("./ArticleIdList")
+            if article_id_list is not None:
+                for art_id in article_id_list.findall("./ArticleId"):
+                    if art_id.get("IdType") == "doi":
+                        if art_id.text:
+                            doi_val = art_id.text.strip()
+                            break
 
         pmid_link = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
         title_element = article.find("./ArticleTitle")
@@ -172,6 +201,7 @@ def parse_pubmed_article(article_xml: ET.Element) -> Optional[ArticleDetails]:
             "pmid": pmid, "pmid_link": pmid_link,
             "pmcid": pmcid_val, "pmcid_link": pmcid_link_val,
             "abstract": abstract if abstract != "未找到摘要" else None,
+            "doi": doi_val,  # 添加提取到的 DOI
         }
     except Exception as e:
         logger.error(f"错误: 解析文章 PMID {pmid or 'UNKNOWN'} 时出错: {e}")
@@ -179,290 +209,422 @@ def parse_pubmed_article(article_xml: ET.Element) -> Optional[ArticleDetails]:
 
 class PubMedClient:
     """PubMed API客户端"""
-    
-    def __init__(self):
-        # 从config加载配置而不是直接从环境变量加载
-        self.base_url = config.PUBMED_API_BASE_URL
-        self.email = config.NCBI_EMAIL
-        self.tool = config.PUBMED_TOOL_NAME
-        self.max_results = config.RELATED_ARTICLES_MAX  # 使用正确配置的整数值
-        self.years_back = config.RELATED_ARTICLES_YEARS_BACK
-        self.batch_size = config.PUBMED_EFETCH_BATCH_SIZE
-        self.timeout = config.PUBMED_REQUEST_TIMEOUT
-        self.delay = config.PUBMED_REQUEST_DELAY
-        self.retry_count = config.PUBMED_RETRY_COUNT
-
-    def _extract_text(self, element: Optional[ET.Element]) -> str:
-        return element.text.strip() if element is not None and element.text else ""
-
-    def _parse_article_details_xml(self, xml_content: str) -> List[Dict[str, Any]]:
-        articles = []
+    def __init__(self, 
+                 api_key: Optional[str] = None, 
+                 email: Optional[str] = None,
+                 timeout: float = config.settings.DEFAULT_REQUEST_TIMEOUT, # 从配置获取或设置默认值
+                 retry_count: int = config.settings.PUBMED_RETRY_COUNT, # 从配置获取或设置默认值
+                 ssl_verify: bool = True, # 增加ssl_verify选项
+                 max_results: Optional[int] = None, # 修改为 Optional[int]
+                 years_back: Optional[int] = None): # 修改为 Optional[int]
+        self.base_url = config.settings.PUBMED_API_BASE_URL.rstrip('/')
+        # 安全地访问 NCBI_API_KEY，如果未定义则默认为 None
+        self.api_key = api_key or getattr(config.settings, 'NCBI_API_KEY', None) 
+        self.email = email or config.settings.NCBI_EMAIL
+        self.timeout = timeout
+        self.retry_count = retry_count
+        self.ssl_verify = ssl_verify
+        
+        # 初始化实例的默认值，确保它们是整数
         try:
-            root = ET.fromstring(xml_content)
-            for article_xml in root.findall('.//PubmedArticle'):
-                pmid_val = self._extract_text(article_xml.find(".//PMID"))
-                title = self._extract_text(article_xml.find(".//ArticleTitle"))
-                
-                authors_list = []
-                author_list_xml = article_xml.find(".//AuthorList")
-                if author_list_xml is not None:
-                    for author_xml in author_list_xml.findall(".//Author"):
-                        lastname = self._extract_text(author_xml.find(".//LastName"))
-                        forename = self._extract_text(author_xml.find(".//ForeName"))
-                        if lastname:
-                            authors_list.append(f"{forename} {lastname}" if forename else lastname)
-
-                journal_title = self._extract_text(article_xml.find(".//Journal/Title"))
-                pub_date_year = self._extract_text(article_xml.find(".//Journal/JournalIssue/PubDate/Year"))
-                pub_date_month = self._extract_text(article_xml.find(".//Journal/JournalIssue/PubDate/Month"))
-                pub_date_day = self._extract_text(article_xml.find(".//Journal/JournalIssue/PubDate/Day"))
-                
-                pub_date_medline = self._extract_text(article_xml.find(".//Journal/JournalIssue/PubDate/MedlineDate"))
-
-                if pub_date_year and pub_date_month and pub_date_day:
-                    pub_date = f"{pub_date_year}-{pub_date_month}-{pub_date_day}"
-                elif pub_date_year and pub_date_month:
-                    pub_date = f"{pub_date_year}-{pub_date_month}"
-                elif pub_date_year:
-                    pub_date = pub_date_year
-                elif pub_date_medline: # Fallback to MedlineDate if structured date is not available
-                    pub_date = pub_date_medline
-                else:
-                    pub_date = ""
-
-                abstract_parts = [self._extract_text(p) for p in article_xml.findall(".//Abstract/AbstractText")]
-                abstract = "\n".join(filter(None, abstract_parts))
-                
-                pmcid_element = article_xml.find(".//ArticleIdList/ArticleId[@IdType='pmc']")
-                pmcid = pmcid_element.text.strip() if pmcid_element is not None and pmcid_element.text else ""
-
-                # Corrected DOI Extraction
-                doi_element = article_xml.find("./MedlineCitation/Article/ArticleIdList/ArticleId[@IdType='doi']")
-                if doi_element is None: # Fallback to ELocationID
-                    doi_element = article_xml.find("./MedlineCitation/Article/ELocationID[@EIdType='doi']")
-                
-                doi = self._extract_text(doi_element)
-
-                article_data = {
-                    "pmid": pmid_val,
-                    "title": title,
-                    "authors": authors_list,
-                    "journal": journal_title,
-                    "pub_date": pub_date,
-                    "abstract": abstract,
-                    "pmcid": pmcid,
-                    "doi": doi,
-                    "pmid_link": f"https://pubmed.ncbi.nlm.nih.gov/{pmid_val}/" if pmid_val else "",
-                    "pmcid_link": f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else "",
-                }
-                articles.append(article_data)
-        except ET.ParseError as e:
-            logger.error(f"[PubMedClient] XML解析错误: {e}")
-        return articles
-
-    @retry(stop=stop_after_attempt(config.PUBMED_RETRY_COUNT), wait=wait_exponential(multiplier=1, min=4, max=10))
-    async def batch_get_article_details_by_pmids(self, pmids: List[str], email: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
-        if not pmids:
-            return {}
+            self.max_results = int(max_results if max_results is not None else getattr(config.settings, 'RELATED_ARTICLES_MAX', 50))
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid initial max_results ('{max_results}' or config), defaulting to 50.")
+            self.max_results = 50
         
-        unique_pmids = sorted(list(set(filter(None, pmids))))
-        if not unique_pmids:
-            return {}
+        try:
+            self.years_back = int(years_back if years_back is not None else getattr(config.settings, 'RELATED_ARTICLES_YEARS_BACK', 5))
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid initial years_back ('{years_back}' or config), defaulting to 5.")
+            self.years_back = 5
 
-        results: Dict[str, Dict[str, Any]] = {}
-        email_to_use = email or config.NCBI_EMAIL
-        if not email_to_use:
-            logger.warning("[PubMedClient] 未提供邮箱地址，PubMed API请求可能受限。")
-
-        tool = config.PUBMED_TOOL_NAME
-        base_url = config.PUBMED_API_BASE_URL.rstrip('/')
-        efetch_url = f"{base_url}/efetch.fcgi"
-        batch_size = config.PUBMED_EFETCH_BATCH_SIZE
-
-        async with httpx.AsyncClient(timeout=config.PUBMED_REQUEST_TIMEOUT) as client:
-            for i in range(0, len(unique_pmids), batch_size):
-                batch_pmids = unique_pmids[i:i+batch_size]
-                params = {
-                    "db": "pubmed",
-                    "id": ",".join(batch_pmids),
-                    "retmode": "xml",
-                    "tool": tool,
-                    "email": email_to_use
-                }
-                
-                logger.info(f"[PubMedClient] 批量获取PMID详情: {len(batch_pmids)}个 (批次 {i//batch_size + 1})")
-                
-                try:
-                    response = await client.get(efetch_url, params=params)
-                    response.raise_for_status()
-                    
-                    parsed_articles = self._parse_article_details_xml(response.text)
-                    for article_detail in parsed_articles:
-                        if article_detail.get('pmid'):
-                            results[article_detail['pmid']] = article_detail
-                        else:
-                            logger.warning(f"[PubMedClient] 解析到的文章缺少PMID: {str(article_detail)[:100]}")
-                            
-                    if len(batch_pmids) > 1 and i + batch_size < len(unique_pmids): # Avoid sleep for single batch or last batch
-                        await asyncio.sleep(config.PUBMED_REQUEST_DELAY) # Respect NCBI rate limits
-
-                except httpx.HTTPStatusError as e:
-                    logger.error(f"[PubMedClient] 批量获取PMID详情时HTTP错误: {e.response.status_code} - {e.response.text[:200]}")
-                except httpx.RequestError as e:
-                    logger.error(f"[PubMedClient] 批量获取PMID详情时请求错误: {e}")
-                except Exception as e:
-                    logger.exception(f"[PubMedClient] 批量获取PMID详情时发生意外错误: {e}")
-        
-        logger.info(f"[PubMedClient] 成功获取 {len(results)}/{len(unique_pmids)} 个PMID的详细信息。")
-        return results
-
-    async def get_article_details_by_pmid(self, pmid: str, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        self.tool = getattr(config.settings, 'PUBMED_TOOL_NAME', 'slais_pubmed_client')  # 添加tool属性用于URL构建
+        # 添加batch_size属性
+        self.efetch_batch_size = getattr(config.settings, 'PUBMED_EFETCH_BATCH_SIZE', 200)
+        logger.info(f"PubMedClient initialized. Email: {self.email}, API_KEY_PROVIDED: {bool(self.api_key)}, Max Results: {self.max_results}, Years Back: {self.years_back}")
+    
+    def _exponential_backoff(self, attempt: int) -> float:
+        """计算指数退避时间"""
+        return min(config.settings.PUBMED_MAX_BACKOFF, (2 ** attempt) + (random.uniform(0, 1)))
+    
+    async def _get_doi_from_pmid_crossref(self, pmid: str, client: httpx.AsyncClient) -> Optional[str]:
         """
-        异步根据PMID获取单篇PubMed文章的详细信息。
+        通过 CrossRef API 异步获取 PMID 对应的 DOI。
+        
+        Args:
+            pmid: PubMed ID
+            client: httpx.AsyncClient 实例，用于发起请求
+            
+        Returns:
+            找到时返回 DOI 字符串，否则返回 None
         """
         if not pmid:
-            logger.debug(f"[PubMedClient] get_article_details_by_pmid 调用时未提供 pmid。")
             return None
         
-        logger.debug(f"[PubMedClient] 准备为单个 pmid 调用 batch_get_article_details_by_pmids: {pmid}")
+        logger.info(f"尝试通过 CrossRef API 为 PMID {pmid} 查询 DOI...")
+        mailto = self.email or config.settings.NCBI_EMAIL
+        headers = {'User-Agent': f'{self.tool}/1.0 (mailto:{mailto})'}
+        
         try:
-            results_dict = await self.batch_get_article_details_by_pmids(pmids=[pmid], email=email)
-            article_detail = results_dict.get(pmid)
-            if article_detail:
-                logger.debug(f"[PubMedClient] 成功获取 pmid 的详细信息: {pmid}")
+            url = f"https://api.crossref.org/works?filter=pmid:{pmid}&mailto={mailto}"
+            response = await client.get(url, headers=headers, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get("status") == "ok" and data["message"]["items"]:
+                # 通常第一个结果是正确的
+                doi = data["message"]["items"][0].get("DOI")
+                if doi:
+                    logger.info(f"通过 CrossRef 为 PMID {pmid} 找到 DOI: {doi}")
+                    return doi.lower()  # DOI 不区分大小写，标准实践是存储小写形式
+                else:
+                    logger.warning(f"CrossRef API 响应中未找到 PMID {pmid} 的 DOI。")
             else:
-                logger.warning(f"[PubMedClient] 未能从批量调用中获取 pmid 的详细信息: {pmid}")
-            return article_detail
+                logger.warning(f"CrossRef API 未能为 PMID {pmid} 找到 DOI。响应状态: {data.get('status')}")
+        except httpx.HTTPStatusError as e:
+            logger.error(f"CrossRef API 请求 PMID {pmid} HTTP状态错误: {e.response.status_code} - {e.response.text}")
+        except httpx.RequestError as e:
+            logger.error(f"CrossRef API 请求 PMID {pmid} 失败: {e}")
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
+            logger.error(f"解析 CrossRef API 响应 (PMID {pmid}) 出错: {e}")
         except Exception as e:
-            logger.exception(f"[PubMedClient] get_article_details_by_pmid 执行 pmid: {pmid} 时出错: {e}")
-            return None
-
-    async def get_related_articles(self, pmid: str, max_results: int = None, years_back: int = None) -> List[Dict[str, Any]]:
+            logger.error(f"通过 CrossRef 查询 DOI (PMID {pmid}) 时发生未知错误: {e}", exc_info=True)
+        return None
+    
+    @retry(
+        stop=stop_after_attempt(config.settings.PUBMED_RETRY_COUNT), # 使用配置的重试次数
+        wait=wait_exponential(multiplier=1, min=1, max=10), # 指数等待
+        retry=retry_if_exception_type((httpx.TransportError, anyio.EndOfStream, asyncio.TimeoutError)), # 指定重试的异常类型
+        before_sleep=before_sleep_log(logger, logging.WARNING), # 重试前记录日志
+        reraise=True # 重试失败后重新引发异常
+    )
+    async def get_related_articles(self, pmid: str, max_results: Optional[int] = None, years_back: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         获取与PMID相关的文章
         
         参数:
             pmid: PubMed ID
-            max_results: 最大结果数量，如果为None则使用配置值
-            years_back: 回溯年数，如果为None则使用配置值
+            max_results: 最大结果数量，如果为None则使用实例配置值
+            years_back: 回溯年数，如果为None则使用实例配置值
         返回:
             相关文章列表
         """
         if not pmid:
             return []
         
-        # 使用参数值或默认配置值
-        if max_results is None:
-            max_results = self.max_results
-        try:
-            max_results = int(max_results)
-        except (ValueError, TypeError):
-            logger.warning(f"Invalid max_results value, using default: {self.max_results}")
-            max_results = self.max_results
-            
-        if years_back is None:
-            years_back = self.years_back
-        try:
-            years_back = int(years_back)
-        except (ValueError, TypeError):
-            logger.warning(f"Invalid years_back value, using default: {self.years_back}")
-            years_back = self.years_back
-            
-        logger.info(f"Getting related articles for PMID: {pmid}, max_results: {max_results}, years_back: {years_back}")
+        # 处理 max_results 参数
+        effective_max_results = self.max_results
+        if max_results is not None:
+            try:
+                val = int(max_results)
+                if val > 0:
+                    effective_max_results = val
+                else:
+                    logger.warning(f"Provided max_results ({max_results}) is not positive, using instance default: {self.max_results}")
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid max_results value ('{max_results}') provided, using instance default: {self.max_results}")
         
-        # 构建URL时添加参数
-        url = f"{self.base_url}elink.fcgi?dbfrom=pubmed&db=pubmed&id={pmid}&cmd=neighbor&retmode=json&retmax={max_results}&tool={self.tool}&email={self.email}"
+        # 处理 years_back 参数
+        effective_years_back = self.years_back
+        if years_back is not None:
+            try:
+                val = int(years_back)
+                if val >= 0: # years_back can be 0
+                    effective_years_back = val
+                else:
+                    logger.warning(f"Provided years_back ({years_back}) is negative, using instance default: {self.years_back}")
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid years_back value ('{years_back}') provided, using instance default: {self.years_back}")
+            
+        logger.info(f"Getting related articles for PMID: {pmid}, max_results: {effective_max_results}, years_back: {effective_years_back}")
+
+        # 获取今天的日期和N年前的日期
+        today = datetime.now()
+        years_ago_date = today - timedelta(days=effective_years_back*365.25)
+        min_date = years_ago_date.strftime("%Y/%m/%d")
+        max_date = today.strftime("%Y/%m/%d")
         
+        # 构建URL时添加斜杠，并使用 cmd=neighbor_history 获取相关文章
+        url = f"{self.base_url}/elink.fcgi?dbfrom=pubmed&db=pubmed&id={pmid}&cmd=neighbor_history&retmode=json&email={self.email}&tool={self.tool}"
+        if self.api_key:
+            url += f"&api_key={self.api_key}"
+            
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-                    
-                    related_pmids = []
-                    try:
-                        related_links = data["linksets"][0]["linksetdbs"]
-                        for link_item in related_links:
-                            if link_item["linkname"] == "pubmed_pubmed":
-                                related_pmids = [str(link_pmid) for link_pmid in link_item["links"]]
-                                if isinstance(max_results, int) and max_results > 0:
-                                    related_pmids = related_pmids[:max_results]
+            headers = {'User-Agent': f'{self.tool}/1.0 ({self.email})'}
+            
+            # 步骤1：使用 elink 获取相关文章历史记录
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                elink_data = response.json()
+                
+                # 提取WebEnv和QueryKey
+                webenv = None
+                query_key = None
+                
+                if "linksets" in elink_data and len(elink_data["linksets"]) > 0:
+                    linkset = elink_data["linksets"][0]
+                    if "webenv" in linkset:
+                        webenv = linkset["webenv"]
+                    if "linksetdbhistories" in linkset and len(linkset["linksetdbhistories"]) > 0:
+                        for history in linkset["linksetdbhistories"]:
+                            if history.get("linkname") == "pubmed_pubmed":
+                                query_key = history.get("querykey")
                                 break
-                    except (KeyError, IndexError, TypeError) as e:
-                        logger.warning(f"Failed to get related PMIDs from response for PMID: {pmid}, error: {str(e)}")
-                        return []
+                
+                if not webenv or not query_key:
+                    logger.warning(f"未能从elink响应中提取WebEnv或QueryKey。响应数据: {elink_data}")
+                    return []
+                
+                # 步骤2：使用esearch过滤最近N年的相关文章
+                esearch_url = f"{self.base_url}/esearch.fcgi?db=pubmed&query_key={query_key}&WebEnv={webenv}&usehistory=y&retmax=0&datetype=pdat&mindate={min_date}&maxdate={max_date}&retmode=json&email={self.email}&tool={self.tool}"
+                if self.api_key:
+                    esearch_url += f"&api_key={self.api_key}"
+                
+                response = await client.get(esearch_url, headers=headers)
+                response.raise_for_status()
+                esearch_data = response.json()
+                
+                # 提取过滤后的计数、WebEnv和QueryKey
+                count = 0
+                filtered_webenv = None
+                filtered_query_key = None
+                
+                if "esearchresult" in esearch_data:
+                    result = esearch_data["esearchresult"]
+                    if "count" in result:
+                        try:
+                            count = int(result["count"])
+                        except ValueError:
+                            logger.error(f"无法将count值 '{result['count']}' 转换为整数")
+                    filtered_webenv = result.get("webenv")
+                    filtered_query_key = result.get("querykey")
+                
+                if count == 0 or not filtered_webenv or not filtered_query_key:
+                    logger.info(f"在最近 {effective_years_back} 年内未找到相关文章，或无法获取过滤后的WebEnv/QueryKey")
+                    return []
+                
+                # 步骤3：获取相关文章的详细信息
+                # 限制最大结果数
+                actual_max = min(count, effective_max_results)
+                
+                # 计算需要多少批次
+                num_batches = math.ceil(actual_max / self.efetch_batch_size)
+                
+                all_results = []
+                
+                for batch in range(num_batches):
+                    start = batch * self.efetch_batch_size
+                    retmax = min(self.efetch_batch_size, actual_max - start)
                     
-                    if not related_pmids:
-                        logger.info(f"No related PMIDs found for PMID: {pmid}")
-                        return []
-                        
-                    logger.info(f"Found {len(related_pmids)} related PMIDs for PMID: {pmid}")
-                    return await self.get_articles_by_pmids(related_pmids)
+                    efetch_url = f"{self.base_url}/efetch.fcgi?db=pubmed&query_key={filtered_query_key}&WebEnv={filtered_webenv}&retstart={start}&retmax={retmax}&retmode=xml&email={self.email}&tool={self.tool}"
+                    if self.api_key:
+                        efetch_url += f"&api_key={self.api_key}"
+                    
+                    response = await client.get(efetch_url, headers=headers)
+                    response.raise_for_status()
+                    
+                    # 解析XML响应
+                    efetch_xml = ET.fromstring(response.text)
+                    article_elements = efetch_xml.findall(".//PubmedArticle")
+                    
+                    for article_element in article_elements:
+                        article_details = parse_pubmed_article(article_element)
+                        if article_details:
+                            # 如果从 PubMed XML 中没有提取到 DOI 但有 PMID，尝试通过 CrossRef 获取
+                            if not article_details.get("doi") and article_details.get("pmid"):
+                                logger.debug(f"PMID {article_details['pmid']} 的 DOI 在 PubMed XML 中未找到，尝试通过 CrossRef 获取。")
+                                crossref_doi = await self._get_doi_from_pmid_crossref(article_details["pmid"], client)
+                                if crossref_doi:
+                                    article_details["doi"] = crossref_doi
+                            
+                            # 创建一个标准格式的结果字典
+                            result = {
+                                "doi": article_details.get("doi", ""),  # 使用提取或补充的 DOI
+                                "pmid": article_details.get("pmid", ""),
+                                "pmid_link": article_details.get("pmid_link", ""),
+                                "title": article_details.get("title", ""),
+                                "authors": article_details.get("authors", []),
+                                "pub_date": article_details.get("publication_date", ""),
+                                "journal": article_details.get("journal", ""),
+                                "abstract": article_details.get("abstract", ""),
+                                "pmcid": article_details.get("pmcid", ""),
+                                "pmcid_link": article_details.get("pmcid_link", ""),
+                                "citation_count": "",  # 从PubMed无法直接获取
+                                "s2_paper_id": ""  # PubMed不提供S2 ID
+                            }
+                            all_results.append(result)
+                    
+                    # 如果不是最后一批，加入延迟
+                    if batch < num_batches - 1:
+                        await asyncio.sleep(config.settings.PUBMED_REQUEST_DELAY or 0.33) # 默认延迟约1/3秒
+                
+                logger.info(f"Found {len(all_results)} related articles for PMID: {pmid}")
+                return all_results[:effective_max_results]  # 确保不超过请求的最大数量
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Error getting related articles for PMID {pmid}: {e.status_code}, message='{e.message}', url='{e.request.url}'")
+            return []
         except Exception as e:
-            logger.error(f"Error getting related articles for PMID {pmid}: {str(e)}")
+            logger.error(f"Generic error getting related articles for PMID {pmid}: {str(e)}")
             return []
 
-    async def get_articles_by_pmids(self, pmids: List[str]) -> List[Dict[str, Any]]:
-        """通过PMID列表获取文章详情"""
-        if not pmids:
-            return []
-            
-        pmids_str = ",".join(pmids)
-        url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmids_str}&retmode=json"
+    @retry(
+        stop=stop_after_attempt(config.settings.PUBMED_RETRY_COUNT),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((httpx.TransportError, anyio.EndOfStream, asyncio.TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True
+    )
+    async def get_article_details_by_pmid(self, pmid: str, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        异步根据PMID获取文章的详细信息。
+        处理潜在的网络错误和其他异常。
+        """
+        if not pmid:
+            logger.warning("[PubMedClient] PMID为空，无法获取文章详情。")
+            return None
+
+        logger.info(f"[PubMedClient] 正在通过PMID '{pmid}' 获取文章详情...")
         
+        efetch_url = f"{self.base_url}/efetch.fcgi"
+        params = {
+            "db": "pubmed",
+            "id": pmid,
+            "retmode": "xml",
+            "tool": self.tool,
+            "email": email or self.email,
+        }
+        if self.api_key:
+            params["api_key"] = self.api_key
+
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    response.raise_for_status()
-                    data = await response.json()
+            async with httpx.AsyncClient(timeout=self.timeout, verify=self.ssl_verify) as client:
+                response = await client.get(efetch_url, params=params)
+                response.raise_for_status()
+                
+                # 解析XML响应
+                xml_content = response.text
+                root = ET.fromstring(xml_content)
+                
+                # 查找第一个PubmedArticle元素
+                article_element = root.find(".//PubmedArticle")
+                if article_element is None:
+                    logger.warning(f"[PubMedClient] PMID {pmid} 的响应中未找到PubmedArticle元素。")
+                    return None
+                
+                # 使用辅助函数解析文章
+                article_details = parse_pubmed_article(article_element)
+                if article_details:
+                    # 如果从 PubMed XML 中没有提取到 DOI 但有 PMID，尝试通过 CrossRef 获取
+                    if not article_details.get("doi") and article_details.get("pmid"):
+                        logger.debug(f"[PubMedClient] PMID {article_details['pmid']} 的 DOI 在 PubMed XML 中未找到，尝试通过 CrossRef 获取。")
+                        async with httpx.AsyncClient(timeout=self.timeout) as crossref_client:
+                            crossref_doi = await self._get_doi_from_pmid_crossref(article_details["pmid"], crossref_client)
+                            if crossref_doi:
+                                article_details["doi"] = crossref_doi
                     
-                    results = []
-                    for pmid in pmids:
-                        if pmid in data["result"]:
-                            article_data = data["result"][pmid]
-                            # 尝试提取DOI
-                            doi = ""
-                            if "articleids" in article_data:
-                                for id_obj in article_data["articleids"]:
-                                    if id_obj["idtype"] == "doi":
-                                        doi = id_obj["value"]
-                                        break
-                                        
-                            # 提取PMCID
-                            pmcid = ""
-                            pmcid_link = ""
-                            if "articleids" in article_data:
-                                for id_obj in article_data["articleids"]:
-                                    if id_obj["idtype"] == "pmc":
-                                        pmcid = id_obj["value"]
-                                        if pmcid.startswith("PMC"):
-                                            pmcid_link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
-                                        break
-                            
-                            # 提取作者信息
-                            authors = []
-                            if "authors" in article_data and article_data["authors"]:
-                                authors = [author.get("name", "") for author in article_data["authors"]]
-                            authors_str = "; ".join(authors)
-                            
-                            result = {
-                                "doi": doi,
-                                "pmid": pmid,
-                                "pmid_link": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
-                                "title": article_data.get("title", ""),
-                                "authors_str": authors_str,
-                                "pub_date": article_data.get("pubdate", ""),
-                                "journal": article_data.get("source", ""),
-                                "abstract": article_data.get("abstract", ""),
-                                "pmcid": pmcid,
-                                "pmcid_link": pmcid_link,
-                                "citation_count": "",
-                                "s2_paper_id": ""
-                            }
-                            results.append(result)
-                    
-                    logger.info(f"Retrieved {len(results)} articles details from PMIDs")
-                    return results
+                    logger.info(f"[PubMedClient] 成功获取PMID {pmid} 的文章详情。")
+                    return article_details
+                else:
+                    logger.warning(f"[PubMedClient] 解析PMID {pmid} 的文章详情失败。")
+                    return None
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"[PubMedClient] 通过PMID '{pmid}' 获取文章详情时发生HTTP状态错误: {e.response.status_code} - {e.response.text}")
+            # 对于404等特定错误，可能不需要重试
+            if e.response.status_code == 404:
+                return None
+            raise  # 其他HTTP错误重新引发，由tenacity处理
+        except (httpx.TransportError, anyio.EndOfStream, asyncio.TimeoutError) as e:
+            logger.warning(f"[PubMedClient] 通过PMID '{pmid}' 获取文章详情时发生网络传输错误: {type(e).__name__} - {e}")
+            raise  # 重新引发，由tenacity处理
+        except ET.ParseError as e:
+            logger.error(f"[PubMedClient] 解析PMID '{pmid}' 的XML响应时出错: {e}")
+            return None
         except Exception as e:
-            logger.error(f"Error getting articles by PMIDs {pmids}: {str(e)}")
-            return []
+            logger.exception(f"[PubMedClient] 通过PMID '{pmid}' 获取文章详情时发生意外错误: {e}")
+            raise  # 重新引发，由tenacity处理
+
+    async def get_articles_by_pmids(self, pmids: List[str], email: str) -> List[Dict[str, Any]]:
+        """通过PMID列表批量获取文章详情。"""
+        if not pmids: return []
+        logger.info(f"开始为 {len(pmids)} 个PMID批量获取文章详情 (PubMed efetch)。")
+        
+        all_article_details: List[Dict[str, Any]] = []
+        pmid_batches = [pmids[i:i + self.efetch_batch_size] for i in range(0, len(pmids), self.efetch_batch_size)]
+        headers = {'User-Agent': f'{self.tool}/1.0 ({email})'}
+
+        async with httpx.AsyncClient(timeout=self.timeout * 2, headers=headers) as client: # 批量请求可能需要更长时间
+            for i, pmid_batch in enumerate(pmid_batches):
+                if not pmid_batch: continue
+                logger.info(f"正在处理PMID批次 {i+1}/{len(pmid_batches)} (数量: {len(pmid_batch)}) (PubMed efetch)")
+                efetch_params = {
+                    'db': 'pubmed', 'id': ",".join(pmid_batch), 'rettype': 'xml',
+                    'retmode': 'xml', 'email': email, 'tool': self.tool
+                }
+                try:
+                    response_efetch = await client.get(f"{self.base_url}/efetch.fcgi", params=efetch_params)
+                    response_efetch.raise_for_status()
+                    efetch_xml = ET.fromstring(response_efetch.content)
+                    articles_xml = efetch_xml.findall(".//PubmedArticle")
+                    
+                    # 为每一批创建需要进行 CrossRef DOI 查询的任务列表
+                    tasks = []
+                    parsed_articles_in_batch = []
+                    
+                    # 先解析所有文章并准备异步查询 CrossRef
+                    for article_xml_elem in articles_xml:
+                        details = parse_pubmed_article(article_xml_elem)
+                        parsed_articles_in_batch.append(details)  # 可能包含 None
+                        
+                        if details and not details.get("doi") and details.get("pmid"):
+                            # 如果没有 DOI 但有 PMID，准备任务
+                            tasks.append(self._get_doi_from_pmid_crossref(details["pmid"], client))
+                        else:
+                            # 如果已有 DOI 或没有 PMID，创建一个立即完成的任务
+                            tasks.append(asyncio.sleep(0, result=details.get("doi") if details else None))
+                    
+                    # 并行执行所有 CrossRef 查询
+                    crossref_results = await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    # 将 CrossRef 结果应用到解析的文章中
+                    for idx, article_details in enumerate(parsed_articles_in_batch):
+                        if article_details is None:
+                            continue
+                            
+                        crossref_result = crossref_results[idx]
+                        if isinstance(crossref_result, Exception):
+                            logger.error(f"CrossRef 查询 PMID {article_details.get('pmid', 'unknown')} 出错: {crossref_result}")
+                        elif crossref_result and not article_details.get("doi"):
+                            # 如果 CrossRef 查询成功并且之前没有 DOI
+                            article_details["doi"] = crossref_result
+                            
+                        # 创建结果字典
+                        result = {
+                            "doi": article_details.get("doi", ""),  # 使用提取或补充的 DOI
+                            "pmid": article_details.get("pmid", ""),
+                            "pmid_link": article_details.get("pmid_link", ""),
+                            "title": article_details.get("title", ""),
+                            "authors": article_details.get("authors", []),
+                            "authors_str": "; ".join(article_details.get("authors", [])) if article_details.get("authors") else "",
+                            "pub_date": article_details.get("publication_date", ""),
+                            "journal": article_details.get("journal", ""),
+                            "abstract": article_details.get("abstract", ""),
+                            "pmcid": article_details.get("pmcid", ""),
+                            "pmcid_link": article_details.get("pmcid_link", ""),
+                            "citation_count": "",
+                            "s2_paper_id": ""
+                        }
+                        all_article_details.append(result)
+                    
+                except httpx.HTTPStatusError as e:
+                    logger.error(f"批量efetch PMIDs时 HTTP错误: {e.response.status_code} - {e.request.url}")
+                except Exception as e:
+                    logger.error(f"批量efetch PMIDs时发生错误: {e}")
+                
+                if i < len(pmid_batches) - 1: # 批次间延迟
+                    await asyncio.sleep(getattr(config.settings, 'PUBMED_REQUEST_DELAY', 0.33))
+                    
+        logger.info(f"批量获取完成，共获得 {len(all_article_details)} 篇文章的详细信息。")
+        return all_article_details
