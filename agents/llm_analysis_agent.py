@@ -24,19 +24,24 @@ class MethodologyAnalysisAgent(BaseResearchAgent):
 
     def _build_chain(self, prompt_template_str: str) -> LLMChain:
         """构建并返回方法学分析的LLMChain。"""
-        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content"])
+        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
         return LLMChain(llm=self.llm_client, prompt=prompt)
 
     async def analyze_methodology(
         self, 
         content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        image_analysis: str = ""  # 添加图像分析参数，默认为空字符串
     ) -> Union[Dict[str, Any], str]:
         try:
             logger.info(f"分析文献方法，内容长度: {len(content)} 字符")
             truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
             chain = self._build_chain(METHODOLOGY_ANALYSIS_PROMPT)
-            response = await chain.ainvoke({"content": truncated_content}, config={"callbacks": callbacks})
+            # 传递图像分析内容
+            response = await chain.ainvoke({
+                "content": truncated_content,
+                "image_analysis": image_analysis  # 添加图像分析内容
+            }, config={"callbacks": callbacks})
             response_text = response.get("text", str(response))
             logger.debug(f"方法分析原始响应: {response_text[:200]}...")
             return response_text if isinstance(response_text, str) else str(response_text)
@@ -47,9 +52,9 @@ class MethodologyAnalysisAgent(BaseResearchAgent):
             logger.error(f"方法分析时发生错误: {str(e)}")
             return f"错误：方法学分析失败 ({e})"
 
-    async def run(self, content: str, callbacks: Optional[List[BaseCallbackHandler]] = None) -> Dict[str, Any]:
+    async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> Dict[str, Any]:
         """实现抽象的run方法。"""
-        return await self.analyze_methodology(content, callbacks)
+        return await self.analyze_methodology(content, callbacks, image_analysis)
 
 class InnovationExtractionAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
@@ -57,19 +62,24 @@ class InnovationExtractionAgent(BaseResearchAgent):
 
     def _build_chain(self, prompt_template_str: str) -> LLMChain:
         """构建并返回创新点提取的LLMChain。"""
-        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content"])
+        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
         return LLMChain(llm=self.llm_client, prompt=prompt)
 
     async def extract_innovations(
         self, 
         content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        image_analysis: str = ""  # 添加图像分析参数，默认为空字符串
     ) -> Union[Dict[str, Any], str]:
         try:
             logger.info(f"提取创新点，内容长度: {len(content)} 字符")
             truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
             chain = self._build_chain(INNOVATION_EXTRACTION_PROMPT)
-            response = await chain.ainvoke({"content": truncated_content}, config={"callbacks": callbacks})
+            # 传递图像分析内容
+            response = await chain.ainvoke({
+                "content": truncated_content,
+                "image_analysis": image_analysis  # 添加图像分析内容
+            }, config={"callbacks": callbacks})
             response_text = response.get("text", str(response))
             logger.debug(f"创新点提取原始响应: {response_text[:200]}...")
             return response_text if isinstance(response_text, str) else str(response_text)
@@ -80,9 +90,9 @@ class InnovationExtractionAgent(BaseResearchAgent):
             logger.error(f"创新点提取时发生错误: {str(e)}")
             return f"错误：创新点提取失败 ({e})"
 
-    async def run(self, content: str, callbacks: Optional[List[BaseCallbackHandler]] = None) -> Dict[str, Any]:
+    async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> Dict[str, Any]:
         """实现抽象的run方法。"""
-        return await self.extract_innovations(content, callbacks)
+        return await self.extract_innovations(content, callbacks, image_analysis)
 
 class QAGenerationAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
@@ -91,11 +101,11 @@ class QAGenerationAgent(BaseResearchAgent):
     def _build_chain(self, prompt_template_str: str) -> LLMChain:
         """构建并返回问答生成的LLMChain。"""
         if prompt_template_str == QA_GENERATION_PROMPT:
-            input_variables = ["content", "num_questions"]
+            input_variables = ["content", "num_questions", "image_analysis"]
         elif prompt_template_str == BATCH_ANSWER_GENERATION_PROMPT:
-            input_variables = ["content", "questions_json_list_string"]
+            input_variables = ["content", "questions_json_list_string", "image_analysis"]
         else:
-            input_variables = ["content"]
+            input_variables = ["content", "image_analysis"]
 
         prompt = PromptTemplate(template=prompt_template_str, input_variables=input_variables)
         return LLMChain(llm=self.llm_client, prompt=prompt)
@@ -103,7 +113,8 @@ class QAGenerationAgent(BaseResearchAgent):
     async def generate_questions(
         self, 
         content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        image_analysis: str = ""  # 添加图像分析参数，默认为空字符串
     ) -> List[str]:
         logger.info(f"生成问题，内容长度: {len(content)} 字符 (传递给分析前)")
         try:
@@ -111,7 +122,8 @@ class QAGenerationAgent(BaseResearchAgent):
             chain = self._build_chain(QA_GENERATION_PROMPT)
             response = await chain.ainvoke({
                 "content": truncated_content,
-                "num_questions": config.settings.MAX_QUESTIONS_TO_GENERATE
+                "num_questions": config.settings.MAX_QUESTIONS_TO_GENERATE,
+                "image_analysis": image_analysis
             }, config={"callbacks": callbacks})
             response_text = response.get("text", str(response))
             logger.debug(f"问题生成原始响应: {response_text[:200]}...")
@@ -127,7 +139,8 @@ class QAGenerationAgent(BaseResearchAgent):
         self, 
         questions: List[str], 
         content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        image_analysis: str = ""  # 添加图像分析参数，默认为空字符串
     ) -> List[Dict[str, str]]:
         """
         根据文献内容和问题列表批量生成答案。
@@ -143,14 +156,15 @@ class QAGenerationAgent(BaseResearchAgent):
         # 显式定义输入变量以避免解析错误
         prompt_template = PromptTemplate(
             template=BATCH_ANSWER_GENERATION_PROMPT,
-            input_variables=["content", "questions_json_list_string"]
+            input_variables=["content", "questions_json_list_string", "image_analysis"]
         )
         chain = self._create_llm_chain(prompt_template_obj=prompt_template)
 
         try:
             response = await chain.ainvoke({
                 "content": truncated_content, 
-                "questions_json_list_string": questions_json_list_string
+                "questions_json_list_string": questions_json_list_string,
+                "image_analysis": image_analysis
             }, config={"callbacks": callbacks})
             response_text = response.get("text", str(response))
             
@@ -234,8 +248,8 @@ class QAGenerationAgent(BaseResearchAgent):
 
         return questions[:config.settings.MAX_QUESTIONS_TO_GENERATE]
 
-    async def run(self, content: str, callbacks: Optional[List[BaseCallbackHandler]] = None) -> List[Dict[str, str]]:
-        return await self.generate_questions(content, callbacks)
+    async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> List[Dict[str, str]]:
+        return await self.generate_questions(content, callbacks, image_analysis)
 
 class StorytellingAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
@@ -243,25 +257,29 @@ class StorytellingAgent(BaseResearchAgent):
 
     def _build_chain(self, prompt_template_str: str) -> LLMChain:
         """构建并返回讲故事的LLMChain。"""
-        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content"])
+        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
         return LLMChain(llm=self.llm_client, prompt=prompt)
 
     async def tell_story(
         self, 
         content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        image_analysis: str = ""  # 添加图像分析参数，默认为空字符串
     ) -> str:
         logger.info(f"以讲故事的方式讲述文献，内容长度: {len(content)} 字符")
         truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
         chain = self._build_chain(prompts.STORYTELLING_PROMPT)
-        response = await chain.ainvoke({"content": truncated_content}, config={"callbacks": callbacks})
+        response = await chain.ainvoke({
+            "content": truncated_content,
+            "image_analysis": image_analysis
+        }, config={"callbacks": callbacks})
         response_text = response.get("text", str(response))
         logger.debug(f"讲故事原始响应: {response_text[:200]}...")
         return response_text if isinstance(response_text, str) else str(response_text)
 
-    async def run(self, content: str, callbacks: Optional[List[BaseCallbackHandler]] = None) -> str:
+    async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> str:
         """实现抽象的run方法。"""
-        return await self.tell_story(content, callbacks)
+        return await self.tell_story(content, callbacks, image_analysis)
 
 class MindMapAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
@@ -269,8 +287,8 @@ class MindMapAgent(BaseResearchAgent):
 
     def _build_chain(self, prompt_template_str: str) -> LLMChain:
         """构建并返回生成脑图的LLMChain。"""
-        # 明确定义只使用"content"作为输入变量
-        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content"])
+        # 明确定义只使用"content"和"image_analysis"作为输入变量
+        prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
         
         # 添加诊断日志以便调试
         logger.debug(f"MindMapAgent._build_chain: PromptTemplate.input_variables = {prompt.input_variables}")
@@ -280,7 +298,8 @@ class MindMapAgent(BaseResearchAgent):
     async def generate_mindmap(
         self, 
         content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        image_analysis: str = ""  # 添加图像分析参数，默认为空字符串
     ) -> str:
         logger.info(f"生成 Mermaid 脑图，内容长度: {len(content)} 字符")
         truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
@@ -307,21 +326,19 @@ graph TD
 请只返回 Mermaid 代码块，不要包含额外的解释文本。"""
 
             # 创建全新的提示和链，避免任何潜在的变量/缓存问题
-            prompt = PromptTemplate(template=template_str, input_variables=["content"])
+            prompt = PromptTemplate(template=template_str, input_variables=["content", "image_analysis"])
             chain = LLMChain(llm=self.llm_client, prompt=prompt)
             
-            # 只传递content参数
-            response = await chain.ainvoke({"content": truncated_content}, config={"callbacks": callbacks})
+            # 传递content和image_analysis参数
+            response = await chain.ainvoke({
+                "content": truncated_content, 
+                "image_analysis": image_analysis
+            }, config={"callbacks": callbacks})
             response_text = response.get("text", str(response))
             
-            # 确保响应是正确的Mermaid代码块，如果不是则格式化它
-            if "```mermaid" not in response_text:
-                # 尝试提取可能是未正确格式化的Mermaid代码
-                if "graph" in response_text and "-->" in response_text:
-                    response_text = f"```mermaid\n{response_text}\n```"
-                else:
-                    # 如果无法找到明显的Mermaid语法，添加警告
-                    response_text = f"```mermaid\ngraph TD\n    A[警告] --> B[生成的脑图可能不符合Mermaid语法]\n    B --> C[原始输出已保留在下方]\n```\n\n原始LLM输出:\n{response_text}"
+            # 使用formatting_utils中的格式化函数，避免重复逻辑
+            from agents.formatting_utils import format_mermaid_code
+            response_text = format_mermaid_code(response_text)
             
             logger.debug(f"生成脑图原始响应: {response_text[:200]}...")
             return response_text if isinstance(response_text, str) else str(response_text)
@@ -338,6 +355,6 @@ graph TD
 ```
 """
 
-    async def run(self, content: str, callbacks: Optional[List[BaseCallbackHandler]] = None) -> str:
+    async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> str:
         """实现抽象的run方法。"""
-        return await self.generate_mindmap(content, callbacks)
+        return await self.generate_mindmap(content, callbacks, image_analysis)

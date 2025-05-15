@@ -261,6 +261,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         "",
         "## 目录",
         "- [1. 文献元数据](#1-文献元数据)",
+        "- [1b. 图片内容分析](#1b-图片内容分析)",
         "- [2. 方法学分析](#2-方法学分析)",
         "- [3. 创新点提取](#3-创新点提取)",
         "- [4. 问答对](#4-问答对)",
@@ -336,6 +337,41 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("</details>")
     md_content.append("")
     md_content.append("\n---\n") # 在元数据部分后添加分割线
+
+    # 新增：图片内容分析部分
+    image_analysis = results.get("image_analysis", [])
+    image_paths = results.get("image_paths", [])
+    md_content.append("## 1b. 图片内容分析")
+    md_content.append("<details open>")
+    md_content.append("<summary>点击展开/折叠</summary>")
+    md_content.append("")
+    if image_analysis and isinstance(image_analysis, list):
+        for idx, img in enumerate(image_analysis):
+            img_path = img.get("image_path", "")
+            desc = img.get("description", "")
+            # 尝试相对路径预览图片
+            rel_img_path = img_path
+            # 如果 image_paths 是相对路径，优先用 image_paths 匹配
+            if image_paths:
+                # 支持绝对路径转相对
+                for p in image_paths:
+                    if p in img_path or Path(img_path).name == Path(p).name:
+                        rel_img_path = p
+                        break
+            md_content.append(f"<details>")
+            md_content.append(f"<summary><b>图片 {idx+1}</b>: <code>{rel_img_path}</code></summary>")
+            md_content.append("")
+            # 图片预览
+            md_content.append(f"<img src='{rel_img_path}' alt='图片{idx+1}' style='max-width:400px; border:1px solid #ccc; margin-bottom:8px;' />")
+            md_content.append("")
+            md_content.append(f"<b>结构化描述：</b><br>{desc}")
+            md_content.append("</details>")
+            md_content.append("")
+    else:
+        md_content.append("<p>未检测到图片或图片内容分析结果。</p>")
+    md_content.append("</details>")
+    md_content.append("")
+    md_content.append("\n---\n") # 图片分析后分割线
 
     # 2. 方法学分析
     methodology = results.get("methodology_analysis", "")

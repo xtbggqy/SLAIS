@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     OPENAI_API_BASE_URL: Optional[str] = Field("https://api.openai.com/v1", description="Base URL for OpenAI or compatible API (optional)")
     OPENAI_TEMPERATURE: float = Field(0.0, description="Temperature for OpenAI or compatible API")
 
+    # 图像 LLM 配置
+    IMAGE_LLM_API_KEY: str = Field("", description="API key for Image LLM")
+    IMAGE_LLM_API_MODEL: str = Field("qwen-vl-plus", description="Model name for Image LLM")
+    IMAGE_LLM_API_BASE_URL: str = Field("", description="Base URL for Image LLM")
+    IMAGE_LLM_TEMPERATURE: float = Field(0.1, description="Temperature for Image LLM")
+
     # NCBI Configuration
     NCBI_EMAIL: Optional[str] = Field(None, description="Email address for NCBI API requests")
     RELATED_ARTICLES_YEARS_BACK: int = Field(5, description="Years back to search for related articles in PubMed")
@@ -60,6 +66,13 @@ class Settings(BaseSettings):
     # Semantic Scholar API Configuration
     SEMANTIC_SCHOLAR_API_KEY: Optional[str] = Field(None, description="API key for Semantic Scholar API")
     SEMANTIC_SCHOLAR_API_BASE_URL: str = Field("https://api.semanticscholar.org/graph/v1", description="Base URL for Semantic Scholar API")
+    SEMANTIC_SCHOLAR_GRAPH_API_BASE_URL: str = Field("https://api.semanticscholar.org/graph/v1", description="Base URL for Semantic Scholar Graph API")
+    SEMANTIC_SCHOLAR_API_BATCH_SIZE: int = Field(10, description="Batch size for Semantic Scholar API requests")
+    SEMANTIC_SCHOLAR_REQUEST_DELAY: float = Field(0.5, description="Delay between Semantic Scholar API requests")
+    SEMANTIC_SCHOLAR_RETRY_COUNT: int = Field(3, description="Retry count for Semantic Scholar API requests")
+    SEMANTIC_SCHOLAR_TIMEOUT: float = Field(30.0, description="Timeout for Semantic Scholar API requests")
+    SEMANTIC_SCHOLAR_MAX_REFERENCES_PER_PAGE: int = Field(100, description="Maximum number of references per page for Semantic Scholar API")
+
     S2_REQUEST_TIMEOUT: float = Field(45.0, description="Timeout for Semantic Scholar API requests")
     S2_CONN_LIMIT: int = Field(10, description="Connection limit for Semantic Scholar API")
     S2_RETRY_COUNT: int = Field(3, description="Retry count for Semantic Scholar API requests")
@@ -68,7 +81,7 @@ class Settings(BaseSettings):
     S2_RATE_LIMIT_WITH_KEY: int = Field(800, description="Rate limit per minute with Semantic Scholar API key")
     S2_RATE_LIMIT_WITHOUT_KEY: int = Field(120, description="Rate limit per minute without Semantic Scholar API key")
     S2_RATE_LIMIT_BUFFER_FACTOR: float = Field(0.8, description="Buffer factor for Semantic Scholar API rate limit")
-    S2_DEFAULT_FIELDS: str = Field("paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,publicationTypes,authors.name,authors.url", description="Default fields to retrieve from Semantic Scholar API")
+    S2_DEFAULT_FIELDS: str = Field("paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,publicationTypes,authors,authors.name,authors.url", description="Default fields to retrieve from Semantic Scholar API")
     S2_REFERENCES_FIELDS: str = Field("citedPaper.externalIds", description="Fields to retrieve for references from Semantic Scholar API")
     S2_REFERENCES_LIMIT: int = Field(1000, description="Limit for retrieving references from Semantic Scholar API")
 
@@ -96,6 +109,9 @@ class Settings(BaseSettings):
     MAX_QUESTIONS_TO_GENERATE: int = Field(int(os.getenv("MAX_QUESTIONS_TO_GENERATE", 30)), ge=1, description="Maximum number of Q&A pairs to generate")
     MAX_CONTENT_CHARS_FOR_LLM: int = Field(15000, ge=1000, description="Maximum content characters to pass to LLM for analysis tasks")
 
+    # markdown子目录名，可在.env中配置，未配置时自动为 <pdf_stem>_markdown
+    MARKDOWN_SUBDIR: str = ""
+
     # Derived configurations (like LOG_FILE) can be defined as properties or methods if needed
     @property
     def LOG_FILE(self) -> str:
@@ -115,7 +131,12 @@ class Settings(BaseSettings):
             Path(directory).mkdir(parents=True, exist_ok=True)
 
 # Create a global settings instance
-settings = Settings()
+settings = Settings(_env_file=".env", _env_file_encoding="utf-8")
+
+# 添加关键配置的调试输出
+print(f"DEBUG: 配置加载完成，S2批处理大小: {settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
+print(f"DEBUG: 从环境变量加载的DOI: {settings.ARTICLE_DOI}")
+print(f"DEBUG: 最大问题生成数量: {settings.MAX_QUESTIONS_TO_GENERATE}")
 
 # Update module-level variables to use the settings instance
 PUBMED_API_BASE_URL = settings.PUBMED_API_BASE_URL
@@ -125,6 +146,10 @@ DASHSCOPE_API_KEY = settings.DASHSCOPE_API_KEY
 OPENAI_API_MODEL = settings.OPENAI_API_MODEL
 OPENAI_API_BASE_URL = settings.OPENAI_API_BASE_URL
 OPENAI_TEMPERATURE = settings.OPENAI_TEMPERATURE
+IMAGE_LLM_API_KEY = settings.IMAGE_LLM_API_KEY
+IMAGE_LLM_API_MODEL = settings.IMAGE_LLM_API_MODEL
+IMAGE_LLM_API_BASE_URL = settings.IMAGE_LLM_API_BASE_URL
+IMAGE_LLM_TEMPERATURE = settings.IMAGE_LLM_TEMPERATURE
 NCBI_EMAIL = settings.NCBI_EMAIL
 RELATED_ARTICLES_YEARS_BACK = settings.RELATED_ARTICLES_YEARS_BACK
 PUBMED_TOOL_NAME = settings.PUBMED_TOOL_NAME
@@ -135,6 +160,12 @@ PUBMED_RETRY_COUNT = settings.PUBMED_RETRY_COUNT
 RELATED_ARTICLES_MAX = settings.RELATED_ARTICLES_MAX
 SEMANTIC_SCHOLAR_API_KEY = settings.SEMANTIC_SCHOLAR_API_KEY
 SEMANTIC_SCHOLAR_API_BASE_URL = settings.SEMANTIC_SCHOLAR_API_BASE_URL
+SEMANTIC_SCHOLAR_GRAPH_API_BASE_URL = settings.SEMANTIC_SCHOLAR_GRAPH_API_BASE_URL
+SEMANTIC_SCHOLAR_API_BATCH_SIZE = settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE
+SEMANTIC_SCHOLAR_REQUEST_DELAY = settings.SEMANTIC_SCHOLAR_REQUEST_DELAY
+SEMANTIC_SCHOLAR_RETRY_COUNT = settings.SEMANTIC_SCHOLAR_RETRY_COUNT
+SEMANTIC_SCHOLAR_TIMEOUT = settings.SEMANTIC_SCHOLAR_TIMEOUT
+SEMANTIC_SCHOLAR_MAX_REFERENCES_PER_PAGE = settings.SEMANTIC_SCHOLAR_MAX_REFERENCES_PER_PAGE
 S2_REQUEST_TIMEOUT = settings.S2_REQUEST_TIMEOUT
 S2_CONN_LIMIT = settings.S2_CONN_LIMIT
 S2_RETRY_COUNT = settings.S2_RETRY_COUNT

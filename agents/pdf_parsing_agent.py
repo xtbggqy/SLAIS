@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from slais.utils.logging_utils import logger
-from slais.pdf_utils import convert_pdf_to_markdown
+from slais.pdf_utils import convert_pdf_to_markdown, extract_images
 from slais import config
 
 class PDFParsingAgent:
@@ -61,3 +61,15 @@ class PDFParsingAgent:
             import traceback
             logger.debug(f"错误详情: {traceback.format_exc()}")
             return ""
+
+    async def extract_images(self, pdf_path: str, output_dir: str) -> list:
+        """
+        提取PDF中的图片到指定目录。
+        Args:
+            pdf_path: PDF文件路径
+            output_dir: 图片输出目录
+        Returns:
+            图片文件路径列表
+        """
+        # extract_images 是同步函数，这里直接调用即可
+        return extract_images(pdf_path, output_dir)

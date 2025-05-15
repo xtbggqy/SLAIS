@@ -88,27 +88,142 @@ class MetadataFetchingAgent:
             "reference_dois": [],
             "full_references_details": []
         }
+        
         if not paper_id:
             logger.warning("未提供Paper ID，无法获取参考文献。")
             return references_data
 
         try:
-            # SemanticScholarClient.batch_get_references_by_papers already fetches S2 details,
-            # then tries to get PMID/PMCID and formats them including links.
-            # It returns a list of formatted reference dictionaries.
+            # 获取参考文献详情
             full_details = await self.s2_client.batch_get_references_by_papers(
                 paper_id=paper_id, 
                 limit=config.S2_REFERENCES_LIMIT
             )
             
-            references_data["full_references_details"] = full_details
-            references_data["reference_dois"] = [ref.get("doi") for ref in full_details if ref.get("doi")]
+            logger.info(f"从S2获取到 {len(full_details)} 条参考文献的完整详情")
             
-            logger.info(f"获取了 {len(references_data['reference_dois'])} 条参考文献的DOI，以及 {len(full_details)} 条参考文献的详细信息。")
+            # 检查数据的完整性
+            if full_details:
+                # 分析第一条记录中有哪些字段
+                sample = full_details[0] if full_details else {}
+                logger.debug(f"参考文献数据字段完整性统计:")
+                logger.debug(f"- DOI字段: {sum(1 for ref in full_details if ref.get('doi'))}/{len(full_details)}")
+                logger.debug(f"- 标题字段: {sum(1 for ref in full_details if ref.get('title'))}/{len(full_details)}")
+                logger.debug(f"- 作者字段: {sum(1 for ref in full_details if ref.get('authors_str'))}/{len(full_details)}")
+                logger.debug(f"- 期刊字段: {sum(1 for ref in full_details if ref.get('journal'))}/{len(full_details)}")
+                logger.debug(f"- 发表日期字段: {sum(1 for ref in full_details if ref.get('pub_date'))}/{len(full_details)}")
+                logger.debug(f"- 摘要字段: {sum(1 for ref in full_details if ref.get('abstract'))}/{len(full_details)}")
+            
+            # 确保所有必需的字段都存在
+            enriched_details = []
+            for ref in full_details:
+                # 确保所有必需字段都有值(即使是空字符串)
+                ref_enriched = {
+                    "doi": ref.get("doi", ""),
+                    "title": ref.get("title", ""),
+                    "authors_str": ref.get("authors_str", ""),
+                    "pub_date": ref.get("pub_date", ""),
+                    "journal": ref.get("journal", ""),
+                    "abstract": ref.get("abstract", ""),
+                    "pmid": ref.get("pmid", ""),
+                    "pmid_link": ref.get("pmid_link", ""),
+                    "pmcid": ref.get("pmcid", ""),
+                    "pmcid_link": ref.get("pmcid_link", ""),
+                    "citation_count": ref.get("citation_count", 0),
+                    "s2_paper_id": ref.get("s2_paper_id", "")
+                }
+                
+                # 确保authors字段统一
+                if "authors" not in ref and "authors_str" in ref and ref["authors_str"]:
+                    ref_enriched["authors"] = ref["authors_str"].split("; ")
+                else:
+                    ref_enriched["authors"] = ref.get("authors", [])
+                
+                enriched_details.append(ref_enriched)
+                
+            references_data["full_references_details"] = enriched_details
+            
+            # 验证参考文献DOI数据质量
+            valid_dois = []
+            unique_dois = set()
+            for ref in enriched_details:
+                doi = ref.get("doi", "")
+                if doi:
+                    # 检查DOI重复情况
+                    if doi in unique_dois:
+                        logger.warning(f"发现重复的DOI: {doi}")
+                    else:
+                        unique_dois.add(doi)
+                        valid_dois.append(doi)
+            
+            # 检查所有DOI是否相同
+            if len(valid_dois) > 1 and len(set(valid_dois)) == 1:
+                logger.error(f"所有参考文献使用相同的DOI: {valid_dois[0]}，这可能是数据错误，清除这些DOI")
+                # 清除错误的相同DOI
+                for ref in enriched_details:
+                    ref["doi"] = ""
+                valid_dois = []
+            
+            references_data["reference_dois"] = valid_dois
+            
+            # 正确地从完整详情中提取DOI
+            valid_dois = [ref.get("doi") for ref in enriched_details if ref.get("doi")]
+            references_data["reference_dois"] = valid_dois
+            
+            # 更新日志以显示实际有效的DOI数量
+            doi_count = len(valid_dois)
+            details_count = len(enriched_details)
+            logger.info(f"获取了 {doi_count} 条参考文献的DOI，以及 {details_count} 条参考文献的详细信息。")
+            
+            # 如果DOI全部缺失但有详情，尝试直接请求DOI列表
+            if doi_count == 0 and details_count > 0:
+                logger.warning("参考文献详情中没有DOI，尝试直接获取DOI列表...")
+                direct_dois = await self.s2_client.get_references_by_paper_id(paper_id, limit=config.S2_REFERENCES_LIMIT)
+                if direct_dois:
+                    # 尝试将直接获取的DOI与详情匹配
+                    for i, ref in enumerate(enriched_details):
+                        if i < len(direct_dois):
+                            ref["doi"] = direct_dois[i]
+                    
+                    # 更新引用数据
+                    references_data["full_references_details"] = enriched_details
+                    references_data["reference_dois"] = direct_dois
+                    
+                    logger.info(f"直接获取DOI后: 获取了 {len(direct_dois)} 条参考文献的DOI")
+
+            # 新增: 从Semantic Scholar获取的数据中提取PMID，并使用PubMed API获取更多信息
+            # 收集所有已有的PMID
+            pmids = [ref.get("pmid") for ref in enriched_details if ref.get("pmid")]
+            if pmids:
+                logger.info(f"发现 {len(pmids)} 个参考文献已有PMID，从PubMed获取详细信息...")
+                pubmed_details = await self.pubmed_client.get_articles_by_pmids(pmids, email or "")
+                
+                # 创建PMID到PubMed详情的映射
+                pmid_to_pubmed = {detail.get("pmid"): detail for detail in pubmed_details if detail.get("pmid")}
+                
+                # 更新参考文献的PubMed信息
+                updated_count = 0
+                for ref in enriched_details:
+                    pmid = ref.get("pmid", "")
+                    if pmid and pmid in pmid_to_pubmed:
+                        pubmed_info = pmid_to_pubmed[pmid]
+                        # 更新PubMed相关字段
+                        ref["pmid_link"] = pubmed_info.get("pmid_link", ref.get("pmid_link", ""))
+                        ref["pmcid"] = pubmed_info.get("pmcid", ref.get("pmcid", ""))
+                        ref["pmcid_link"] = pubmed_info.get("pmcid_link", ref.get("pmcid_link", ""))
+                        # 如果参考文献的摘要为空，且PubMed有摘要，则使用PubMed的摘要
+                        if not ref.get("abstract") and pubmed_info.get("abstract"):
+                            ref["abstract"] = pubmed_info.get("abstract", "")
+                        updated_count += 1
+                
+                logger.info(f"成功更新了 {updated_count} 条参考文献的PubMed信息")
+                
+                # 更新references_data
+                references_data["full_references_details"] = enriched_details
 
         except Exception as e:
             logger.exception(f"获取论文 {paper_id} 的参考文献时发生错误: {e}")
-            # Fallback or ensure structure is maintained even on error
+            # 确保即使出错也保持结构一致
             references_data["error"] = str(e)
 
         return references_data

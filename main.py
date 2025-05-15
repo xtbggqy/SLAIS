@@ -7,9 +7,24 @@ from pathlib import Path
 import csv # Import csv module
 
 # 正确设置PYTHONPATH或确保项目结构允许这些导入
-# 假设main.py在项目根目录，slais和agents是其子目录（或通过PYTHONPATH可访问）
+from pathlib import Path
+import sys
+
+# 确保项目根目录在路径中
+project_root = Path(__file__).parent.absolute()
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# 先加载配置，确保环境变量正确设置
 from slais import config
 from slais.utils.logging_utils import logger, setup_logging
+
+# 打印关键配置项，验证是否正确加载
+logger.info(f"主程序启动，配置检查：")
+logger.info(f"ARTICLE_DOI: {config.settings.ARTICLE_DOI}")
+logger.info(f"SEMANTIC_SCHOLAR_API_BATCH_SIZE: {config.settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
+logger.info(f"MAX_QUESTIONS_TO_GENERATE: {config.settings.MAX_QUESTIONS_TO_GENERATE}")
+
 from langchain_openai import ChatOpenAI # 直接导入ChatOpenAI
 from langchain.prompts import PromptTemplate # 导入PromptTemplate
 
@@ -24,6 +39,7 @@ from agents.llm_analysis_agent import (
 )
 from agents.callbacks import TokenUsageCallbackHandler # 新增导入
 from agents.formatting_utils import generate_enhanced_report # 从新模块导入格式化函数
+from agents.image_analysis_agent import ImageAnalysisAgent
 
 async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: str):
     """
@@ -31,17 +47,25 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     """
     logger.info(f"开始处理文章，PDF路径: {pdf_path}, DOI: {article_doi}")
 
-    # 1. 初始化LLM客户端 (直接使用OpenAI)
+    # 1. 初始化LLM客户端 (支持.env配置的模型)
+    # 文本 LLM
     llm_params = {
-        "model_name": config.settings.OPENAI_API_MODEL,
+        "model_name": config.settings.OPENAI_API_MODEL,  # 从.env读取模型名
         "openai_api_key": config.settings.OPENAI_API_KEY,
         "temperature": config.settings.OPENAI_TEMPERATURE
     }
-    if config.settings.OPENAI_API_BASE_URL: # 兼容可能存在的自定义OpenAI基础URL或兼容API
+    if config.settings.OPENAI_API_BASE_URL:
         llm_params["openai_api_base"] = config.settings.OPENAI_API_BASE_URL
-    
+
+    logger.info(
+        f"将使用文本模型: {llm_params.get('model_name')} | "
+        f"API端点: {llm_params.get('openai_api_base', '官方默认')} | "
+        f"温度: {llm_params.get('temperature')}"
+        "（均可在.env中配置 OPENAI_API_MODEL、OPENAI_API_BASE_URL、OPENAI_TEMPERATURE）"
+    )
+
     try:
-        llm = ChatOpenAI(**llm_params) # 直接实例化ChatOpenAI
+        llm = ChatOpenAI(**llm_params)
         logger.info(f"OpenAI LLM客户端初始化完成。模型: {config.settings.OPENAI_API_MODEL}")
     except Exception as e:
         logger.error(f"初始化OpenAI LLM客户端失败: {e}")
@@ -49,6 +73,27 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         import traceback
         logger.debug(f"错误详情: {traceback.format_exc()}")
         return None
+
+    # 图像 LLM
+    image_llm_params = {
+        "model_name": config.settings.IMAGE_LLM_API_MODEL,
+        "openai_api_key": config.settings.IMAGE_LLM_API_KEY,
+        "temperature": config.settings.IMAGE_LLM_TEMPERATURE
+    }
+    if config.settings.IMAGE_LLM_API_BASE_URL:
+        image_llm_params["openai_api_base"] = config.settings.IMAGE_LLM_API_BASE_URL
+
+    logger.info(
+        f"将使用图片模型: {image_llm_params.get('model_name')} | "
+        f"API端点: {image_llm_params.get('openai_api_base', '官方默认')} | "
+        f"温度: {image_llm_params.get('temperature')}"
+    )
+
+    try:
+        image_llm = ChatOpenAI(**image_llm_params)
+    except Exception as e:
+        logger.error(f"初始化图片 LLM 客户端失败: {e}")
+        image_llm = None
 
     # 实例化 TokenUsageCallbackHandler
     token_callback_handler = TokenUsageCallbackHandler(model_name=config.settings.OPENAI_API_MODEL)
@@ -62,6 +107,7 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     qa_generator = QAGenerationAgent(llm)
     storytelling_agent = StorytellingAgent(llm)
     mindmap_agent = MindMapAgent(llm)
+    image_agent = ImageAnalysisAgent(image_llm)  # 用图片 LLM 初始化
 
     # 3. 执行流程
     analysis_results = {}
@@ -75,56 +121,108 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     analysis_results["pdf_markdown_content_length"] = len(markdown_content)
     logger.info(f"PDF内容提取完成，Markdown长度: {len(markdown_content)}")
 
+    # 新增：提取图片路径列表（图片统一存放在 output/<pdf_stem>/<pdf_stem>_markdown/images 目录，且为相对路径）
+    pdf_stem = Path(pdf_path).stem
+    # MARKDOWN_SUBDIR 通常未设置，实际输出目录为 <pdf_stem>_markdown
+    markdown_dir = Path(config.settings.OUTPUT_BASE_DIR) / pdf_stem / f"{pdf_stem}_markdown"
+    image_dir = markdown_dir / "images"
+    image_paths = []
+    if image_dir.exists():
+        # 以 markdown_dir 为基准，获得 images 下所有图片的相对路径
+        image_paths = [str((image_dir / p.name).relative_to(markdown_dir)) for p in image_dir.iterdir() if p.is_file() and p.suffix.lower() in [".png", ".jpg", ".jpeg", ".bmp", ".gif"]]
+    elif hasattr(pdf_parser, "extract_images") and callable(getattr(pdf_parser, "extract_images", None)):
+        try:
+            extracted = await pdf_parser.extract_images(pdf_path, output_dir=image_dir)
+            if extracted and isinstance(extracted, list):
+                # 以 markdown_dir 为基准，获得 images 下所有图片的相对路径
+                image_paths = [str(Path(p).relative_to(markdown_dir)) for p in extracted]
+                logger.info(f"自动提取图片，获得 {len(image_paths)} 张图片。")
+        except Exception as e:
+            logger.warning(f"自动提取图片失败: {e}")
+    else:
+        logger.info("PDFParsingAgent 不支持 extract_images 方法，跳过图片自动提取。")
+    analysis_results["image_paths"] = image_paths
+
+    # 3.1b 图片内容分析（并发）
+    if image_paths:
+        logger.info(f"检测到 {len(image_paths)} 张图片，开始分析图片内容...")
+        image_analysis_results = await image_agent.analyze_images(
+            [str(markdown_dir / p) for p in image_paths],
+            context=markdown_content,
+            callbacks=callbacks_list
+        )
+        analysis_results["image_analysis"] = image_analysis_results
+        logger.info(f"图片内容分析完成，获得 {len(image_analysis_results)} 条描述。")
+    else:
+        analysis_results["image_analysis"] = []
+        logger.info("未检测到可分析的图片。")
+
+    # 新增：将图片内容分析结果格式化为Markdown字符串，供LLM分析用
+    def format_image_analysis_md(image_analysis, image_paths):
+        if not image_analysis or not isinstance(image_analysis, list):
+            return "无图片内容分析结果。"
+        lines = []
+        for idx, img in enumerate(image_analysis):
+            img_path = img.get("image_path", "")
+            desc = img.get("description", "")
+            rel_img_path = img_path
+            if image_paths:
+                for p in image_paths:
+                    if p in img_path or Path(img_path).name == Path(p).name:
+                        rel_img_path = p
+                        break
+            lines.append(f"图片{idx+1}: {rel_img_path}\n结构化描述: {desc}\n")
+        return "\n".join(lines)
+    image_analysis_md = format_image_analysis_md(analysis_results["image_analysis"], analysis_results["image_paths"])
+
+    # 合并文献内容和图片分析内容，供LLM分析
+    full_content = markdown_content + "\n\n图片内容分析：\n" + image_analysis_md
+
     # 3.2 元数据获取
     logger.info("步骤 2: 获取元数据...")
     metadata = await metadata_fetcher.fetch_metadata(doi=article_doi, email=ncbi_email)
     analysis_results["metadata"] = metadata
     logger.info("元数据获取完成。")
-    
     s2_info = metadata.get("s2_info")
     pubmed_info = metadata.get("pubmed_info")
 
-    # 3.3 方法学分析
-    logger.info("步骤 3: 分析方法学...")
-    methodology_analysis = await methodology_analyzer.analyze_methodology(
-        markdown_content, 
-        callbacks=callbacks_list # 传递回调
-    )
-    analysis_results["methodology_analysis"] = methodology_analysis
-    logger.info("方法学分析完成。")
+    # 3.3-3.9 LLM分析并发执行
+    logger.info("步骤 3-9: 并发执行LLM分析任务...")
+    tasks = {
+        "methodology_analysis": methodology_analyzer.analyze_methodology(
+            full_content, callbacks=callbacks_list),
+        "innovation_extraction": innovation_extractor.extract_innovations(
+            full_content, callbacks=callbacks_list),
+        "questions": qa_generator.generate_questions(
+            full_content, callbacks=callbacks_list),
+        "story": storytelling_agent.tell_story(
+            full_content, callbacks=callbacks_list),
+        "mindmap": mindmap_agent.generate_mindmap(
+            full_content, callbacks=callbacks_list)
+    }
+    # 并发执行
+    results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+    for key, value in zip(tasks.keys(), results):
+        if isinstance(value, Exception):
+            logger.error(f"{key} 分析任务出错: {value}")
+            analysis_results[key] = None
+        else:
+            analysis_results[key] = value
 
-    # 3.4 创新点提取
-    logger.info("步骤 4: 提取创新点...")
-    innovation_extraction = await innovation_extractor.extract_innovations(
-        markdown_content, 
-        callbacks=callbacks_list # 传递回调
-    )
-    analysis_results["innovation_extraction"] = innovation_extraction
-    logger.info("创新点提取完成。")
-
-    # 3.5 问答生成 - 先生成问题
-    logger.info("步骤 5a: 生成问题...")
-    questions = await qa_generator.generate_questions(
-        markdown_content, 
-        callbacks=callbacks_list # 传递回调
-    )
-    logger.info(f"生成了 {len(questions)} 个问题。")
-    analysis_results["questions"] = questions
-
-    # 3.5 问答生成 - 再为每个问题生成答案
+    # 3.5 问答生成 - 再为每个问题生成答案（单独并发）
     logger.info("步骤 5b: 为每个问题生成答案...")
+    questions = analysis_results.get("questions") or []
     if questions:
         qa_pairs = await qa_generator.generate_answers_batch(
             questions,
-            markdown_content,
-            callbacks=callbacks_list  # 传递回调
+            full_content,
+            callbacks=callbacks_list
         )
     else:
         qa_pairs = []
-
     analysis_results["qa_pairs"] = qa_pairs
 
-    # 3.6 (可选) 获取参考文献和相关文章 - 示例
+    # 3.6 (可选) 获取参考文献和相关文章
     if s2_info and s2_info.get("paperId"):
         logger.info("步骤 6: 获取参考文献...")
         references_data = await metadata_fetcher.fetch_references(s2_info["paperId"], ncbi_email)
@@ -132,7 +230,6 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         logger.info(f"获取了 {len(references_data.get('reference_dois', []))} 条参考文献的DOI。")
     else:
         logger.info(f"步骤 6: 跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效 (s2_info: {s2_info is not None}, paperId present: {s2_info.get('paperId') if s2_info else 'N/A'})。")
-        # 确保 analysis_results["references_data"] 有一个默认结构，以便后续保存步骤不会出错
         analysis_results["references_data"] = {
             "source_paper_id": s2_info.get("paperId") if s2_info else "N/A",
             "reference_dois": [],
@@ -146,36 +243,33 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         analysis_results["related_articles_pubmed"] = related_articles_pubmed
         logger.info(f"获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
 
-    # 3.7 故事讲述
-    logger.info("步骤 8: 以讲故事的方式讲述文献...")
-    story = await storytelling_agent.tell_story(
-        markdown_content,
-        callbacks=callbacks_list  # 传递回调
-    )
-    analysis_results["story"] = story
-    logger.info("故事讲述完成。")
-
-    # 3.8 生成脑图
-    logger.info("步骤 9: 生成 Mermaid 脑图...")
-    mindmap = await mindmap_agent.generate_mindmap(
-        markdown_content,
-        callbacks=callbacks_list  # 传递回调
-    )
-    analysis_results["mindmap"] = mindmap
-    logger.info("Mermaid 脑图生成完成。")
-
     logger.info("所有处理步骤完成。")
-    token_callback_handler.log_total_usage()  # 在流程结束时记录总用量
+    token_callback_handler.log_total_usage()
     return analysis_results
 
 def save_csv_report(data: list, filepath: Path, fieldnames: list):
-    """Saves data to a CSV file."""
+    """Saves data to a CSV file with enhanced error handling and data validation."""
     try:
-        with open(filepath, 'w', newline='', encoding='utf-8-sig') as f: # utf-8-sig for Excel compatibility
+        # 确保所有记录都有所有需要的字段
+        for item in data:
+            for field in fieldnames:
+                if field not in item:
+                    item[field] = ""  # 添加缺失的字段
+        
+        with open(filepath, 'w', newline='', encoding='utf-8-sig') as f:  # utf-8-sig for Excel compatibility
             writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
             writer.writeheader()
-            writer.writerows(data)
-        logger.info(f"CSV报告已保存到: {filepath}")
+            
+            # 记录实际写入的数据量
+            valid_count = 0
+            for item in data:
+                try:
+                    writer.writerow(item)
+                    valid_count += 1
+                except Exception as row_error:
+                    logger.warning(f"跳过一行数据，原因: {row_error}")
+            
+            logger.info(f"CSV报告已保存到: {filepath} (成功写入 {valid_count}/{len(data)} 条记录)")
     except Exception as e:
         logger.error(f"保存CSV报告 {filepath} 失败: {e}")
 

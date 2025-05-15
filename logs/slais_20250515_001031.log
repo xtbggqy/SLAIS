@@ -1,4 +1,0 @@
-2025-05-15 00:10:36,200 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250515_001031.log
-2025-05-15 00:10:36,202 - slais_app - INFO - 开始处理文章，PDF路径: pdfs/darwin.pdf, DOI: 10.1126/science.aao4593
-2025-05-15 00:10:37,830 - slais_app - INFO - OpenAI LLM客户端初始化完成。模型: qwen-turbo
-2025-05-15 00:10:37,831 - slais_app - WARNING - 模型 'qwen-turbo' 或基础模型 'qwen' 的Tiktoken编码器未找到。 将使用 'cl100k_base' 作为备用。Token数可能为近似值。

@@ -1,7 +1,0 @@
-2025-05-14 20:48:37,561 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250514_204832.log
-2025-05-14 20:48:37,563 - slais_app - INFO - 开始处理文章，PDF路径: pdfs/darwin.pdf, DOI: 10.1126/science.aao4593
-2025-05-14 20:48:38,892 - slais_app - INFO - OpenAI LLM客户端初始化完成。模型: qwen-turbo
-2025-05-14 20:48:38,892 - slais_app - WARNING - 模型 'qwen-turbo' 或基础模型 'qwen' 的Tiktoken编码器未找到。 将使用 'cl100k_base' 作为备用。Token数可能为近似值。
-2025-05-14 20:48:39,026 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
-2025-05-14 20:48:39,028 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days
-2025-05-14 20:48:39,028 - slais_app - INFO - CacheManager initialized. Cache directory: cache, Expiry: 30 days

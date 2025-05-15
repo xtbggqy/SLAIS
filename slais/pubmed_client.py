@@ -1,4 +1,3 @@
-import httpx
 import urllib.parse
 import json
 import xml.etree.ElementTree as ET # 用于解析XML
@@ -7,6 +6,7 @@ import math # 用于向上取整除法
 import asyncio # 用于异步休眠
 import anyio # 添加 anyio 导入
 import random # 添加 random 导入
+import time # 添加 time 导入
 from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log, retry_if_exception_type
 import logging
 from typing import List, Optional, Dict, Any, TypedDict # 导入 TypedDict
@@ -241,74 +241,64 @@ class PubMedClient:
         self.tool = getattr(config.settings, 'PUBMED_TOOL_NAME', 'slais_pubmed_client')  # 添加tool属性用于URL构建
         # 添加batch_size属性
         self.efetch_batch_size = getattr(config.settings, 'PUBMED_EFETCH_BATCH_SIZE', 200)
+        self._rate_limit_lock = asyncio.Lock()
+        self._last_request_time = 0
+        self._min_interval = 0.35  # PubMed推荐每秒不超过3次请求
         logger.info(f"PubMedClient initialized. Email: {self.email}, API_KEY_PROVIDED: {bool(self.api_key)}, Max Results: {self.max_results}, Years Back: {self.years_back}")
     
+    async def _wait_for_rate_limit(self):
+        async with self._rate_limit_lock:
+            now = time.time()
+            elapsed = now - self._last_request_time
+            if elapsed < self._min_interval:
+                await asyncio.sleep(self._min_interval - elapsed)
+            self._last_request_time = time.time()
+
     def _exponential_backoff(self, attempt: int) -> float:
         """计算指数退避时间"""
         return min(config.settings.PUBMED_MAX_BACKOFF, (2 ** attempt) + (random.uniform(0, 1)))
     
-    async def _get_doi_from_pmid_crossref(self, pmid: str, client: httpx.AsyncClient) -> Optional[str]:
+    async def _get_doi_from_pmid_crossref(self, pmid_or_doi: str, email: str = None) -> str:
         """
-        通过 CrossRef API 异步获取 PMID 对应的 DOI。
-        
-        Args:
-            pmid: PubMed ID
-            client: httpx.AsyncClient 实例，用于发起请求
-            
-        Returns:
-            找到时返回 DOI 字符串，否则返回 None
+        通过 CrossRef API 查询 DOI（支持传入PMID或DOI，自动判断）。
         """
-        if not pmid:
+        # CrossRef API 只支持通过DOI查元数据，不支持通过PMID查DOI
+        # 但部分DOI格式可能需要归一化
+        import re
+        doi = pmid_or_doi
+        # 如果传入的是PMID（纯数字），直接返回None
+        if re.fullmatch(r"\d+", pmid_or_doi):
             return None
-        
-        logger.info(f"尝试通过 CrossRef API 为 PMID {pmid} 查询 DOI...")
-        mailto = self.email or config.settings.NCBI_EMAIL
-        headers = {'User-Agent': f'{self.tool}/1.0 (mailto:{mailto})'}
-        
+        # 归一化DOI
+        doi = doi.strip().lower().replace("https://doi.org/", "").replace("http://doi.org/", "")
+        url = f"https://api.crossref.org/works/{doi}"
+        headers = {"User-Agent": f"SLAIS/1.0 (mailto:{email or self.email})"}
         try:
-            url = f"https://api.crossref.org/works?filter=pmid:{pmid}&mailto={mailto}"
-            response = await client.get(url, headers=headers, timeout=self.timeout)
-            response.raise_for_status()
-            data = response.json()
-            
-            if data.get("status") == "ok" and data["message"]["items"]:
-                # 通常第一个结果是正确的
-                doi = data["message"]["items"][0].get("DOI")
-                if doi:
-                    logger.info(f"通过 CrossRef 为 PMID {pmid} 找到 DOI: {doi}")
-                    return doi.lower()  # DOI 不区分大小写，标准实践是存储小写形式
-                else:
-                    logger.warning(f"CrossRef API 响应中未找到 PMID {pmid} 的 DOI。")
-            else:
-                logger.warning(f"CrossRef API 未能为 PMID {pmid} 找到 DOI。响应状态: {data.get('status')}")
-        except httpx.HTTPStatusError as e:
-            logger.error(f"CrossRef API 请求 PMID {pmid} HTTP状态错误: {e.response.status_code} - {e.response.text}")
-        except httpx.RequestError as e:
-            logger.error(f"CrossRef API 请求 PMID {pmid} 失败: {e}")
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
-            logger.error(f"解析 CrossRef API 响应 (PMID {pmid}) 出错: {e}")
+            timeout = aiohttp.ClientTimeout(total=getattr(self, "timeout", 20))
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=timeout) as response:
+                    if response.status != 200:
+                        logger.warning(f"[PubMedClient] CrossRef API 查询失败，状态码: {response.status}，DOI: {doi}")
+                        return None
+                    data = await response.json()
+                    # CrossRef返回的DOI在 message.doi
+                    message = data.get("message")
+                    if message and message.get("DOI"):
+                        return message.get("DOI")
+                    return None
         except Exception as e:
-            logger.error(f"通过 CrossRef 查询 DOI (PMID {pmid}) 时发生未知错误: {e}", exc_info=True)
-        return None
-    
+            logger.error(f"通过 CrossRef 查询 DOI (PMID {pmid_or_doi}) 时发生未知错误: {e}")
+            return None
+
     @retry(
         stop=stop_after_attempt(config.settings.PUBMED_RETRY_COUNT), # 使用配置的重试次数
         wait=wait_exponential(multiplier=1, min=1, max=10), # 指数等待
-        retry=retry_if_exception_type((httpx.TransportError, anyio.EndOfStream, asyncio.TimeoutError)), # 指定重试的异常类型
+        retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)), # 更新为aiohttp的异常类型
         before_sleep=before_sleep_log(logger, logging.WARNING), # 重试前记录日志
         reraise=True # 重试失败后重新引发异常
     )
     async def get_related_articles(self, pmid: str, max_results: Optional[int] = None, years_back: Optional[int] = None) -> List[Dict[str, Any]]:
-        """
-        获取与PMID相关的文章
-        
-        参数:
-            pmid: PubMed ID
-            max_results: 最大结果数量，如果为None则使用实例配置值
-            years_back: 回溯年数，如果为None则使用实例配置值
-        返回:
-            相关文章列表
-        """
+        """获取与PMID相关的文章"""
         if not pmid:
             return []
         
@@ -353,117 +343,120 @@ class PubMedClient:
             headers = {'User-Agent': f'{self.tool}/1.0 ({self.email})'}
             
             # 步骤1：使用 elink 获取相关文章历史记录
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.get(url, headers=headers)
-                response.raise_for_status()
-                elink_data = response.json()
+            async with aiohttp.ClientSession() as session:
+                timeout = aiohttp.ClientTimeout(total=self.timeout)
                 
-                # 提取WebEnv和QueryKey
-                webenv = None
-                query_key = None
-                
-                if "linksets" in elink_data and len(elink_data["linksets"]) > 0:
-                    linkset = elink_data["linksets"][0]
-                    if "webenv" in linkset:
-                        webenv = linkset["webenv"]
-                    if "linksetdbhistories" in linkset and len(linkset["linksetdbhistories"]) > 0:
-                        for history in linkset["linksetdbhistories"]:
-                            if history.get("linkname") == "pubmed_pubmed":
-                                query_key = history.get("querykey")
-                                break
-                
-                if not webenv or not query_key:
-                    logger.warning(f"未能从elink响应中提取WebEnv或QueryKey。响应数据: {elink_data}")
-                    return []
-                
-                # 步骤2：使用esearch过滤最近N年的相关文章
-                esearch_url = f"{self.base_url}/esearch.fcgi?db=pubmed&query_key={query_key}&WebEnv={webenv}&usehistory=y&retmax=0&datetype=pdat&mindate={min_date}&maxdate={max_date}&retmode=json&email={self.email}&tool={self.tool}"
-                if self.api_key:
-                    esearch_url += f"&api_key={self.api_key}"
-                
-                response = await client.get(esearch_url, headers=headers)
-                response.raise_for_status()
-                esearch_data = response.json()
-                
-                # 提取过滤后的计数、WebEnv和QueryKey
-                count = 0
-                filtered_webenv = None
-                filtered_query_key = None
-                
-                if "esearchresult" in esearch_data:
-                    result = esearch_data["esearchresult"]
-                    if "count" in result:
-                        try:
-                            count = int(result["count"])
-                        except ValueError:
-                            logger.error(f"无法将count值 '{result['count']}' 转换为整数")
-                    filtered_webenv = result.get("webenv")
-                    filtered_query_key = result.get("querykey")
-                
-                if count == 0 or not filtered_webenv or not filtered_query_key:
-                    logger.info(f"在最近 {effective_years_back} 年内未找到相关文章，或无法获取过滤后的WebEnv/QueryKey")
-                    return []
-                
-                # 步骤3：获取相关文章的详细信息
-                # 限制最大结果数
-                actual_max = min(count, effective_max_results)
-                
-                # 计算需要多少批次
-                num_batches = math.ceil(actual_max / self.efetch_batch_size)
-                
-                all_results = []
-                
-                for batch in range(num_batches):
-                    start = batch * self.efetch_batch_size
-                    retmax = min(self.efetch_batch_size, actual_max - start)
-                    
-                    efetch_url = f"{self.base_url}/efetch.fcgi?db=pubmed&query_key={filtered_query_key}&WebEnv={filtered_webenv}&retstart={start}&retmax={retmax}&retmode=xml&email={self.email}&tool={self.tool}"
-                    if self.api_key:
-                        efetch_url += f"&api_key={self.api_key}"
-                    
-                    response = await client.get(efetch_url, headers=headers)
+                async with session.get(url, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
                     response.raise_for_status()
+                    elink_data = await response.json()
                     
-                    # 解析XML响应
-                    efetch_xml = ET.fromstring(response.text)
-                    article_elements = efetch_xml.findall(".//PubmedArticle")
+                    # 提取WebEnv和QueryKey
+                    webenv = None
+                    query_key = None
                     
-                    for article_element in article_elements:
-                        article_details = parse_pubmed_article(article_element)
-                        if article_details:
-                            # 如果从 PubMed XML 中没有提取到 DOI 但有 PMID，尝试通过 CrossRef 获取
-                            if not article_details.get("doi") and article_details.get("pmid"):
-                                logger.debug(f"PMID {article_details['pmid']} 的 DOI 在 PubMed XML 中未找到，尝试通过 CrossRef 获取。")
-                                crossref_doi = await self._get_doi_from_pmid_crossref(article_details["pmid"], client)
-                                if crossref_doi:
-                                    article_details["doi"] = crossref_doi
+                    if "linksets" in elink_data and len(elink_data["linksets"]) > 0:
+                        linkset = elink_data["linksets"][0]
+                        if "webenv" in linkset:
+                            webenv = linkset["webenv"]
+                        if "linksetdbhistories" in linkset and len(linkset["linksetdbhistories"]) > 0:
+                            for history in linkset["linksetdbhistories"]:
+                                if history.get("linkname") == "pubmed_pubmed":
+                                    query_key = history.get("querykey")
+                                    break
+                    
+                    if not webenv or not query_key:
+                        logger.warning(f"未能从elink响应中提取WebEnv或QueryKey。响应数据: {elink_data}")
+                        return []
+                    
+                    # 步骤2：使用esearch过滤最近N年的相关文章
+                    esearch_url = f"{self.base_url}/esearch.fcgi?db=pubmed&query_key={query_key}&WebEnv={webenv}&usehistory=y&retmax=0&datetype=pdat&mindate={min_date}&maxdate={max_date}&retmode=json&email={self.email}&tool={self.tool}"
+                    if self.api_key:
+                        esearch_url += f"&api_key={self.api_key}"
+                    
+                    async with session.get(esearch_url, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
+                        response.raise_for_status()
+                        esearch_data = await response.json()
+                        
+                        # 提取过滤后的计数、WebEnv和QueryKey
+                        count = 0
+                        filtered_webenv = None
+                        filtered_query_key = None
+                        
+                        if "esearchresult" in esearch_data:
+                            result = esearch_data["esearchresult"]
+                            if "count" in result:
+                                try:
+                                    count = int(result["count"])
+                                except ValueError:
+                                    logger.error(f"无法将count值 '{result['count']}' 转换为整数")
+                            filtered_webenv = result.get("webenv")
+                            filtered_query_key = result.get("querykey")
+                        
+                        if count == 0 or not filtered_webenv or not filtered_query_key:
+                            logger.info(f"在最近 {effective_years_back} 年内未找到相关文章，或无法获取过滤后的WebEnv/QueryKey")
+                            return []
+                        
+                        # 步骤3：获取相关文章的详细信息
+                        # 限制最大结果数
+                        actual_max = min(count, effective_max_results)
+                        
+                        # 计算需要多少批次
+                        num_batches = math.ceil(actual_max / self.efetch_batch_size)
+                        
+                        all_results = []
+                        
+                        for batch in range(num_batches):
+                            start = batch * self.efetch_batch_size
+                            retmax = min(self.efetch_batch_size, actual_max - start)
                             
-                            # 创建一个标准格式的结果字典
-                            result = {
-                                "doi": article_details.get("doi", ""),  # 使用提取或补充的 DOI
-                                "pmid": article_details.get("pmid", ""),
-                                "pmid_link": article_details.get("pmid_link", ""),
-                                "title": article_details.get("title", ""),
-                                "authors": article_details.get("authors", []),
-                                "pub_date": article_details.get("publication_date", ""),
-                                "journal": article_details.get("journal", ""),
-                                "abstract": article_details.get("abstract", ""),
-                                "pmcid": article_details.get("pmcid", ""),
-                                "pmcid_link": article_details.get("pmcid_link", ""),
-                                "citation_count": "",  # 从PubMed无法直接获取
-                                "s2_paper_id": ""  # PubMed不提供S2 ID
-                            }
-                            all_results.append(result)
-                    
-                    # 如果不是最后一批，加入延迟
-                    if batch < num_batches - 1:
-                        await asyncio.sleep(config.settings.PUBMED_REQUEST_DELAY or 0.33) # 默认延迟约1/3秒
+                            efetch_url = f"{self.base_url}/efetch.fcgi?db=pubmed&query_key={filtered_query_key}&WebEnv={filtered_webenv}&retstart={start}&retmax={retmax}&retmode=xml&email={self.email}&tool={self.tool}"
+                            if self.api_key:
+                                efetch_url += f"&api_key={self.api_key}"
+                            
+                            async with session.get(efetch_url, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
+                                response.raise_for_status()
+                                efetch_text = await response.text()
+                                
+                                # 解析XML响应
+                                efetch_xml = ET.fromstring(efetch_text)
+                                article_elements = efetch_xml.findall(".//PubmedArticle")
+                                
+                                for article_element in article_elements:
+                                    article_details = parse_pubmed_article(article_element)
+                                    if article_details:
+                                        # 如果从 PubMed XML 中没有提取到 DOI 但有 PMID，尝试通过 CrossRef 获取
+                                        if not article_details.get("doi") and article_details.get("pmid"):
+                                            logger.debug(f"PMID {article_details['pmid']} 的 DOI 在 PubMed XML 中未找到，尝试通过 CrossRef 获取。")
+                                            crossref_doi = await self._get_doi_from_pmid_crossref(article_details["pmid"], session)
+                                            if crossref_doi:
+                                                article_details["doi"] = crossref_doi
+                                        
+                                        # 创建一个标准格式的结果字典
+                                        result = {
+                                            "doi": article_details.get("doi", ""),  # 使用提取或补充的 DOI
+                                            "pmid": article_details.get("pmid", ""),
+                                            "pmid_link": article_details.get("pmid_link", ""),
+                                            "title": article_details.get("title", ""),
+                                            "authors": article_details.get("authors", []),
+                                            "pub_date": article_details.get("publication_date", ""),
+                                            "journal": article_details.get("journal", ""),
+                                            "abstract": article_details.get("abstract", ""),
+                                            "pmcid": article_details.get("pmcid", ""),
+                                            "pmcid_link": article_details.get("pmcid_link", ""),
+                                            "citation_count": "",  # 从PubMed无法直接获取
+                                            "s2_paper_id": ""  # PubMed不提供S2 ID
+                                        }
+                                        all_results.append(result)
+                            
+                            # 如果不是最后一批，加入延迟
+                            if batch < num_batches - 1:
+                                await asyncio.sleep(config.settings.PUBMED_REQUEST_DELAY or 0.33) # 默认延迟约1/3秒
+                        
+                        logger.info(f"Found {len(all_results)} related articles for PMID: {pmid}")
+                        return all_results[:effective_max_results]  # 确保不超过请求的最大数量
                 
-                logger.info(f"Found {len(all_results)} related articles for PMID: {pmid}")
-                return all_results[:effective_max_results]  # 确保不超过请求的最大数量
-                
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Error getting related articles for PMID {pmid}: {e.status_code}, message='{e.message}', url='{e.request.url}'")
+        except aiohttp.ClientResponseError as e:
+            logger.error(f"Error getting related articles for PMID {pmid}: {e.status}, message='{e.message}', url='{url}'")
             return []
         except Exception as e:
             logger.error(f"Generic error getting related articles for PMID {pmid}: {str(e)}")
@@ -472,7 +465,7 @@ class PubMedClient:
     @retry(
         stop=stop_after_attempt(config.settings.PUBMED_RETRY_COUNT),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.TransportError, anyio.EndOfStream, asyncio.TimeoutError)),
+        retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)), # 更新为aiohttp的异常类型
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True
     )
@@ -499,44 +492,44 @@ class PubMedClient:
             params["api_key"] = self.api_key
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, verify=self.ssl_verify) as client:
-                response = await client.get(efetch_url, params=params)
-                response.raise_for_status()
-                
-                # 解析XML响应
-                xml_content = response.text
-                root = ET.fromstring(xml_content)
-                
-                # 查找第一个PubmedArticle元素
-                article_element = root.find(".//PubmedArticle")
-                if article_element is None:
-                    logger.warning(f"[PubMedClient] PMID {pmid} 的响应中未找到PubmedArticle元素。")
-                    return None
-                
-                # 使用辅助函数解析文章
-                article_details = parse_pubmed_article(article_element)
-                if article_details:
-                    # 如果从 PubMed XML 中没有提取到 DOI 但有 PMID，尝试通过 CrossRef 获取
-                    if not article_details.get("doi") and article_details.get("pmid"):
-                        logger.debug(f"[PubMedClient] PMID {article_details['pmid']} 的 DOI 在 PubMed XML 中未找到，尝试通过 CrossRef 获取。")
-                        async with httpx.AsyncClient(timeout=self.timeout) as crossref_client:
-                            crossref_doi = await self._get_doi_from_pmid_crossref(article_details["pmid"], crossref_client)
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(efetch_url, params=params, timeout=timeout, ssl=self.ssl_verify) as response:
+                    response.raise_for_status()
+                    
+                    # 解析XML响应
+                    xml_content = await response.text()
+                    root = ET.fromstring(xml_content)
+                    
+                    # 查找第一个PubmedArticle元素
+                    article_element = root.find(".//PubmedArticle")
+                    if article_element is None:
+                        logger.warning(f"[PubMedClient] PMID {pmid} 的响应中未找到PubmedArticle元素。")
+                        return None
+                    
+                    # 使用辅助函数解析文章
+                    article_details = parse_pubmed_article(article_element)
+                    if article_details:
+                        # 如果从 PubMed XML 中没有提取到 DOI 但有 PMID，尝试通过 CrossRef 获取
+                        if not article_details.get("doi") and article_details.get("pmid"):
+                            logger.debug(f"[PubMedClient] PMID {article_details['pmid']} 的 DOI 在 PubMed XML 中未找到，尝试通过 CrossRef 获取。")
+                            crossref_doi = await self._get_doi_from_pmid_crossref(article_details["pmid"], session)
                             if crossref_doi:
                                 article_details["doi"] = crossref_doi
-                    
-                    logger.info(f"[PubMedClient] 成功获取PMID {pmid} 的文章详情。")
-                    return article_details
-                else:
-                    logger.warning(f"[PubMedClient] 解析PMID {pmid} 的文章详情失败。")
-                    return None
+                        
+                        logger.info(f"[PubMedClient] 成功获取PMID {pmid} 的文章详情。")
+                        return article_details
+                    else:
+                        logger.warning(f"[PubMedClient] 解析PMID {pmid} 的文章详情失败。")
+                        return None
                 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"[PubMedClient] 通过PMID '{pmid}' 获取文章详情时发生HTTP状态错误: {e.response.status_code} - {e.response.text}")
+        except aiohttp.ClientResponseError as e:
+            logger.error(f"[PubMedClient] 通过PMID '{pmid}' 获取文章详情时发生HTTP状态错误: {e.status} - {e.message}")
             # 对于404等特定错误，可能不需要重试
-            if e.response.status_code == 404:
+            if e.status == 404:
                 return None
             raise  # 其他HTTP错误重新引发，由tenacity处理
-        except (httpx.TransportError, anyio.EndOfStream, asyncio.TimeoutError) as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning(f"[PubMedClient] 通过PMID '{pmid}' 获取文章详情时发生网络传输错误: {type(e).__name__} - {e}")
             raise  # 重新引发，由tenacity处理
         except ET.ParseError as e:
@@ -555,7 +548,8 @@ class PubMedClient:
         pmid_batches = [pmids[i:i + self.efetch_batch_size] for i in range(0, len(pmids), self.efetch_batch_size)]
         headers = {'User-Agent': f'{self.tool}/1.0 ({email})'}
 
-        async with httpx.AsyncClient(timeout=self.timeout * 2, headers=headers) as client: # 批量请求可能需要更长时间
+        timeout = aiohttp.ClientTimeout(total=self.timeout * 2) # 批量请求可能需要更长时间
+        async with aiohttp.ClientSession() as session:
             for i, pmid_batch in enumerate(pmid_batches):
                 if not pmid_batch: continue
                 logger.info(f"正在处理PMID批次 {i+1}/{len(pmid_batches)} (数量: {len(pmid_batch)}) (PubMed efetch)")
@@ -564,62 +558,63 @@ class PubMedClient:
                     'retmode': 'xml', 'email': email, 'tool': self.tool
                 }
                 try:
-                    response_efetch = await client.get(f"{self.base_url}/efetch.fcgi", params=efetch_params)
-                    response_efetch.raise_for_status()
-                    efetch_xml = ET.fromstring(response_efetch.content)
-                    articles_xml = efetch_xml.findall(".//PubmedArticle")
-                    
-                    # 为每一批创建需要进行 CrossRef DOI 查询的任务列表
-                    tasks = []
-                    parsed_articles_in_batch = []
-                    
-                    # 先解析所有文章并准备异步查询 CrossRef
-                    for article_xml_elem in articles_xml:
-                        details = parse_pubmed_article(article_xml_elem)
-                        parsed_articles_in_batch.append(details)  # 可能包含 None
+                    async with session.get(f"{self.base_url}/efetch.fcgi", params=efetch_params, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
+                        response.raise_for_status()
+                        efetch_content = await response.text()
+                        efetch_xml = ET.fromstring(efetch_content)
+                        articles_xml = efetch_xml.findall(".//PubmedArticle")
                         
-                        if details and not details.get("doi") and details.get("pmid"):
-                            # 如果没有 DOI 但有 PMID，准备任务
-                            tasks.append(self._get_doi_from_pmid_crossref(details["pmid"], client))
-                        else:
-                            # 如果已有 DOI 或没有 PMID，创建一个立即完成的任务
-                            tasks.append(asyncio.sleep(0, result=details.get("doi") if details else None))
-                    
-                    # 并行执行所有 CrossRef 查询
-                    crossref_results = await asyncio.gather(*tasks, return_exceptions=True)
-                    
-                    # 将 CrossRef 结果应用到解析的文章中
-                    for idx, article_details in enumerate(parsed_articles_in_batch):
-                        if article_details is None:
-                            continue
+                        # 为每一批创建需要进行 CrossRef DOI 查询的任务列表
+                        tasks = []
+                        parsed_articles_in_batch = []
+                        
+                        # 先解析所有文章并准备异步查询 CrossRef
+                        for article_xml_elem in articles_xml:
+                            details = parse_pubmed_article(article_xml_elem)
+                            parsed_articles_in_batch.append(details)  # 可能包含 None
                             
-                        crossref_result = crossref_results[idx]
-                        if isinstance(crossref_result, Exception):
-                            logger.error(f"CrossRef 查询 PMID {article_details.get('pmid', 'unknown')} 出错: {crossref_result}")
-                        elif crossref_result and not article_details.get("doi"):
-                            # 如果 CrossRef 查询成功并且之前没有 DOI
-                            article_details["doi"] = crossref_result
-                            
-                        # 创建结果字典
-                        result = {
-                            "doi": article_details.get("doi", ""),  # 使用提取或补充的 DOI
-                            "pmid": article_details.get("pmid", ""),
-                            "pmid_link": article_details.get("pmid_link", ""),
-                            "title": article_details.get("title", ""),
-                            "authors": article_details.get("authors", []),
-                            "authors_str": "; ".join(article_details.get("authors", [])) if article_details.get("authors") else "",
-                            "pub_date": article_details.get("publication_date", ""),
-                            "journal": article_details.get("journal", ""),
-                            "abstract": article_details.get("abstract", ""),
-                            "pmcid": article_details.get("pmcid", ""),
-                            "pmcid_link": article_details.get("pmcid_link", ""),
-                            "citation_count": "",
-                            "s2_paper_id": ""
-                        }
-                        all_article_details.append(result)
+                            if details and not details.get("doi") and details.get("pmid"):
+                                # 如果没有 DOI 但有 PMID，准备任务
+                                tasks.append(self._get_doi_from_pmid_crossref(details["pmid"], session))
+                            else:
+                                # 如果已有 DOI 或没有 PMID，创建一个立即完成的任务
+                                tasks.append(asyncio.sleep(0, result=details.get("doi") if details else None))
+                        
+                        # 并行执行所有 CrossRef 查询
+                        crossref_results = await asyncio.gather(*tasks, return_exceptions=True)
+                        
+                        # 将 CrossRef 结果应用到解析的文章中
+                        for idx, article_details in enumerate(parsed_articles_in_batch):
+                            if article_details is None:
+                                continue
+                                
+                            crossref_result = crossref_results[idx]
+                            if isinstance(crossref_result, Exception):
+                                logger.error(f"CrossRef 查询 PMID {article_details.get('pmid', 'unknown')} 出错: {crossref_result}")
+                            elif crossref_result and not article_details.get("doi"):
+                                # 如果 CrossRef 查询成功并且之前没有 DOI
+                                article_details["doi"] = crossref_result
+                                
+                            # 创建结果字典
+                            result = {
+                                "doi": article_details.get("doi", ""),  # 使用提取或补充的 DOI
+                                "pmid": article_details.get("pmid", ""),
+                                "pmid_link": article_details.get("pmid_link", ""),
+                                "title": article_details.get("title", ""),
+                                "authors": article_details.get("authors", []),
+                                "authors_str": "; ".join(article_details.get("authors", [])) if article_details.get("authors") else "",
+                                "pub_date": article_details.get("publication_date", ""),
+                                "journal": article_details.get("journal", ""),
+                                "abstract": article_details.get("abstract", ""),
+                                "pmcid": article_details.get("pmcid", ""),
+                                "pmcid_link": article_details.get("pmcid_link", ""),
+                                "citation_count": "",
+                                "s2_paper_id": ""
+                            }
+                            all_article_details.append(result)
                     
-                except httpx.HTTPStatusError as e:
-                    logger.error(f"批量efetch PMIDs时 HTTP错误: {e.response.status_code} - {e.request.url}")
+                except aiohttp.ClientResponseError as e:
+                    logger.error(f"批量efetch PMIDs时 HTTP错误: {e.status} - {e.request_info.url}")
                 except Exception as e:
                     logger.error(f"批量efetch PMIDs时发生错误: {e}")
                 
@@ -628,3 +623,113 @@ class PubMedClient:
                     
         logger.info(f"批量获取完成，共获得 {len(all_article_details)} 篇文章的详细信息。")
         return all_article_details
+
+    async def get_article_details_by_doi(self, doi: str, email: Optional[str] = None, max_retries: int = 5) -> Optional[Dict[str, Any]]:
+        """
+        异步根据DOI获取文章的详细信息（先用esearch查PMID，再用efetch查详情）。
+        增加限流与指数退避重试。
+        """
+        if not doi:
+            logger.warning("[PubMedClient] DOI为空，无法获取文章详情。")
+            return None
+
+        logger.info(f"[PubMedClient] 正在通过DOI '{doi}' 获取文章详情...")
+
+        esearch_url = f"{self.base_url}/esearch.fcgi"
+        params = {
+            "db": "pubmed",
+            "term": f"{doi}[DOI]",
+            "retmode": "json",
+            "tool": self.tool,
+            "email": email or self.email,
+        }
+        if self.api_key:
+            params["api_key"] = self.api_key
+
+        for attempt in range(max_retries):
+            await self._wait_for_rate_limit()
+            try:
+                timeout = aiohttp.ClientTimeout(total=self.timeout)
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(esearch_url, params=params, timeout=timeout, ssl=self.ssl_verify) as response:
+                        if response.status == 429:
+                            wait_time = min(2 ** attempt, 30)
+                            logger.warning(f"[PubMedClient] 429 Too Many Requests, attempt {attempt+1}/{max_retries}, 等待 {wait_time}s")
+                            await asyncio.sleep(wait_time)
+                            continue
+                        response.raise_for_status()
+                        data = await response.json()
+                        idlist = data.get("esearchresult", {}).get("idlist", [])
+                        if not idlist:
+                            logger.warning(f"[PubMedClient] DOI {doi} 未找到对应的PMID。")
+                            return None
+                        pmid = idlist[0]
+                        return await self.get_article_details_by_pmid(pmid, email)
+            except Exception as e:
+                logger.error(f"[PubMedClient] 通过DOI '{doi}' 获取文章详情时出错: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(min(2 ** attempt, 30))
+                else:
+                    return None
+        return None
+
+    async def batch_get_pmids_from_dois(self, dois: List[str], email: Optional[str] = None) -> Dict[str, Optional[str]]:
+        """
+        批量通过DOI获取PMID，限流与重试。
+        """
+        result = {}
+        for doi in dois:
+            pmid = None
+            try:
+                details = await self.get_article_details_by_doi(doi, email)
+                if details and details.get("pmid"):
+                    pmid = details["pmid"]
+            except Exception as e:
+                logger.warning(f"[PubMedClient] 批量获取PMID时DOI {doi} 出错: {e}")
+            result[doi] = pmid
+        return result
+
+    async def batch_get_article_details_by_pmids(self, pmids: List[str], email: Optional[str] = None, batch_size: int = 100) -> List[Dict[str, Any]]:
+        """
+        批量通过PMID获取文章详情，支持批量efetch，限流与重试。
+        """
+        results = []
+        for i in range(0, len(pmids), batch_size):
+            batch = pmids[i:i+batch_size]
+            for attempt in range(5):
+                await self._wait_for_rate_limit()
+                try:
+                    # ...efetch批量请求逻辑...
+                    # 假设有 self.get_article_details_by_pmid_batch(batch, email)
+                    batch_results = await self.get_article_details_by_pmid_batch(batch, email)
+                    results.extend(batch_results)
+                    break
+                except Exception as e:
+                    logger.warning(f"[PubMedClient] 批量efetch失败，重试 {attempt+1}/5: {e}")
+                    await asyncio.sleep(min(2 ** attempt, 30))
+        return results
+
+    async def get_article_details(self, identifier: str, email: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        根据提供的标识符类型（PMID或DOI）获取文章详情。
+        自动检测标识符类型并调用相应的方法。
+        
+        Args:
+            identifier: PMID或DOI标识符
+            email: 可选，覆盖默认邮箱
+        
+        Returns:
+            文章详情字典或None（如果找不到）
+        """
+        if not identifier:
+            logger.warning("[PubMedClient] 提供的标识符为空")
+            return None
+            
+        # 判断标识符类型：如果是纯数字或以"PMC"开头的数字，则视为PMID
+        if identifier.isdigit() or (identifier.startswith("PMC") and identifier[3:].isdigit()):
+            logger.info(f"[PubMedClient] 将标识符 '{identifier}' 识别为PMID，调用get_article_details_by_pmid")
+            return await self.get_article_details_by_pmid(identifier, email)
+        else:
+            # 假设其他形式的标识符是DOI
+            logger.info(f"[PubMedClient] 将标识符 '{identifier}' 识别为DOI，调用get_article_details_by_doi")
+            return await self.get_article_details_by_doi(identifier, email)
