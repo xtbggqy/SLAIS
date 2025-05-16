@@ -3,15 +3,39 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.outputs import LLMResult
 from slais.utils.logging_utils import logger
 import tiktoken # 用于在API未提供token数时的备用计算
+import os
 
-# 实际成本需要根据您使用的模型和API提供商的最新费率进行配置
-# 以下为示例费率 (每1000个token的成本)
-MODEL_COST_PER_TOKEN = {
-    "qwen-turbo": {"prompt": 0.0003 / 1000, "completion": 0.0006 / 1000}, # 示例：通义千问Turbo
-    "gpt-4": {"prompt": 0.03 / 1000, "completion": 0.06 / 1000},
-    "gpt-3.5-turbo": {"prompt": 0.0015 / 1000, "completion": 0.002 / 1000},
-    # 根据需要添加更多模型
-}
+def load_model_costs_from_env():
+    """
+    从环境变量加载模型价格配置，格式如：
+    MODEL_COSTS=qwen-turbo:0.0003:0.0006,gpt-4:0.03:0.06
+    各项分别为: 模型名:prompt单价:completion单价（每1000token，单位元）
+    """
+    env_val = os.environ.get("MODEL_COSTS", "")
+    costs = {}
+    if env_val:
+        for item in env_val.split(","):
+            parts = item.strip().split(":")
+            if len(parts) == 3:
+                model, prompt, completion = parts
+                try:
+                    costs[model.strip()] = {
+                        "prompt": float(prompt) / 1000,
+                        "completion": float(completion) / 1000
+                    }
+                except Exception:
+                    continue
+    return costs
+
+# 优先从环境变量加载模型价格，否则用默认
+MODEL_COST_PER_TOKEN = load_model_costs_from_env()
+if not MODEL_COST_PER_TOKEN:
+    MODEL_COST_PER_TOKEN = {
+        "qwen-turbo": {"prompt": 0.0003 / 1000, "completion": 0.0006 / 1000}, # 示例：通义千问Turbo
+        "gpt-4": {"prompt": 0.03 / 1000, "completion": 0.06 / 1000},
+        "gpt-3.5-turbo": {"prompt": 0.0015 / 1000, "completion": 0.002 / 1000},
+        # 根据需要添加更多模型
+    }
 
 class TokenUsageCallbackHandler(BaseCallbackHandler):
     """回调处理器，用于跟踪Token使用量和估算成本。"""

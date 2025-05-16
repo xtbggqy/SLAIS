@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="260" height="80" viewBox="0 0 260 80" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle logoDesc">
+  <title id="logoTitle">SLAIS</title>
+  <desc id="logoDesc">PDF文献智能分析与洞察系统项目LOGO</desc>
+  <rect x="6" y="6" width="248" height="68" rx="20" fill="#2C3E50" stroke="#3498db" stroke-width="6"/>
+  <g font-family="Segoe UI, Arial, sans-serif" font-weight="bold">
+    <text x="48" y="54" font-size="42" fill="#3498db" letter-spacing="7">SLAIS</text>
+  </g>
+  <g>
+    <circle cx="210" cy="40" r="18" fill="#fff" stroke="#3498db" stroke-width="4"/>
+    <line x1="210" y1="26" x2="210" y2="54" stroke="#3498db" stroke-width="3" stroke-linecap="round"/>
+    <line x1="196" y1="40" x2="224" y2="40" stroke="#3498db" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="210" cy="40" r="5" fill="#3498db"/>
+  </g>
+</svg>

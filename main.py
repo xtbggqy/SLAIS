@@ -338,6 +338,19 @@ def save_report(results: dict, pdf_path: str):
     else:
         logger.info("没有PubMed相关文献信息可保存为CSV。")
 
+def run_web_app():
+    """
+    启动Streamlit Web界面。
+    """
+    try:
+        import streamlit as st
+    except ImportError:
+        print("未检测到streamlit库，请先运行: pip install streamlit")
+        return
+    # 动态导入web/web_app.py并运行
+    from web.web_app import run_slais_web
+    run_slais_web()
+
 async def main_async():
     """
     异步主函数，协调整个流程。
@@ -346,7 +359,12 @@ async def main_async():
 
     parser = argparse.ArgumentParser(description="PDF文献智能分析与洞察系统 (SLAIS)")
     parser.add_argument("--pdf", type=str, help="要分析的PDF文件路径。")
+    parser.add_argument("--web", action="store_true", help="以Web界面模式运行（Streamlit）")
     args = parser.parse_args()
+
+    if args.web:
+        run_web_app()
+        return
 
     pdf_to_process = args.pdf if args.pdf else config.settings.DEFAULT_PDF_PATH
     article_doi_to_process = config.settings.ARTICLE_DOI

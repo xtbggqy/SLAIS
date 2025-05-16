@@ -32,7 +32,10 @@ sys.path = original_sys_path
 CURRENT_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        extra = "ignore"
 
     # API Configuration
     PUBMED_API_BASE_URL: str = Field("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/", description="Base URL for PubMed API")

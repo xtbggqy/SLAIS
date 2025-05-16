@@ -460,6 +460,12 @@
         ```
         将 `"path/to/your/document.pdf"` 替换为实际的PDF文件路径。
 
+    *   **以Web界面模式运行**（推荐用于交互体验）：
+        ```bash
+        python main.py --web
+        ```
+        启动后将在本地打开Streamlit Web界面，支持PDF上传、参数设置、进度条、报告预览与下载等功能。
+
 4.  **查看输出：**
     *   分析结果将保存在 `.env` 文件中 `OUTPUT_BASE_DIR` 指定的目录下的一个与PDF文件名相关的子目录中。
     *   输出包括：
@@ -479,6 +485,9 @@ python main.py
 
 # 运行并处理位于 pdfs/my_research_paper.pdf 的PDF
 python main.py --pdf "pdfs/my_research_paper.pdf"
+
+# 以Web界面模式运行
+python main.py --web
 ```
 
 ---

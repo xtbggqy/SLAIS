@@ -135,30 +135,27 @@ graph TD
 def format_qa_pairs_for_markdown(qa_pairs: List[Dict[str, str]]) -> str:
     """
     将问答对格式化为美观的Markdown内容。
-    
     Args:
         qa_pairs: 问答对列表，每个元素是包含'question'和'answer'键的字典
-        
     Returns:
         格式化的Markdown文本
     """
     if not qa_pairs:
         return "未能生成问答对。"
-    
+
     md_content = []
-    
     for i, pair in enumerate(qa_pairs):
-        question = pair.get('question', 'N/A')
-        answer = pair.get('answer', 'N/A')
-        
-        # 创建可折叠的问答对
+        question = str(pair.get('question', 'N/A')).strip()
+        answer = str(pair.get('answer', 'N/A')).strip()
+        # 规避HTML嵌套导致的渲染异常，避免多层<details>嵌套
         md_content.append(f"<details>")
-        md_content.append(f"<summary><strong>问题 {i+1}:</strong> {question}</summary>")
+        md_content.append(f"<summary><b>问题 {i+1}：</b>{question}</summary>")
         md_content.append("")
-        md_content.append(f"<strong>回答:</strong> {answer}")
+        # 用Markdown代码块包裹答案，避免长文本或特殊字符导致的渲染错乱
+        md_content.append(f"**回答：**\n\n```\n{answer}\n```")
         md_content.append("</details>")
         md_content.append("")
-    
+
     return "\n".join(md_content)
 
 
@@ -248,18 +245,22 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content = [
         f"# 文献分析报告: {pdf_filename_stem}",
         "",
-        "<div align='center'><img src='https://raw.githubusercontent.com/yourusername/slais/master/docs/logo.png' height='120' alt='SLAIS Logo'></div>",
+        "<div align='center'><img src='logo.svg' height='120' alt='SLAIS Logo'></div>",
         "",
         "---",
         "",
         "## 目录",
-        "- [1. 文献元数据](#1-文献元数据)",
-        "- [1b. 图片内容分析](#1b-图片内容分析)",
-        "- [2. 方法学分析](#2-方法学分析)",
-        "- [3. 创新点提取](#3-创新点提取)",
-        "- [4. 问答对](#4-问答对)",
-        "- [5. 文献故事](#5-文献故事)",
-        "- [6. 文献逻辑脑图](#6-文献逻辑脑图)",
+        "<ul>",
+        "<li><a href='#1-文献元数据'>1. 文献元数据</a></li>",
+        "<li><a href='#1b-图片内容分析'>1b. 图片内容分析</a></li>",
+        "<li><a href='#2-方法学分析'>2. 方法学分析</a></li>",
+        "<li><a href='#3-创新点提取'>3. 创新点提取</a></li>",
+        "<li><a href='#4-问答对'>4. 问答对</a></li>",
+        "<li><a href='#5-文献故事'>5. 文献故事</a></li>",
+        "<li><a href='#6-文献逻辑脑图'>6. 文献逻辑脑图</a></li>",
+        "<li><a href='#7-参考文献信息'>7. 参考文献信息</a></li>",
+        "<li><a href='#8-相关文献信息'>8. 相关文献信息</a></li>",
+        "</ul>",
         "",
         "---",
         ""
@@ -340,16 +341,22 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
             desc = img.get("description", "")
             rel_img_path = img_path
             if image_paths:
+                # 统一路径分隔符为正斜杠，兼容Markdown和Web
+                rel_img_path = img_path.replace("\\", "/")
                 for p in image_paths:
-                    if p in img_path or Path(img_path).name == Path(p).name:
-                        rel_img_path = p
+                    # 也将 image_paths 中的路径分隔符统一
+                    p_norm = p.replace("\\", "/")
+                    if p_norm in rel_img_path or Path(rel_img_path).name == Path(p_norm).name:
+                        rel_img_path = p_norm
                         break
+            # 统一图片路径为正斜杠
+            rel_img_path = rel_img_path.replace("\\", "/")
             md_content.append(f"<details>")
             md_content.append(f"<summary><b>图片 {idx+1}</b>: <code>{rel_img_path}</code></summary>")
             md_content.append("")
-            md_content.append(f"<a href='{rel_img_path}' target='_blank'><img src='{rel_img_path}' alt='图片{idx+1}' style='max-width:300px; border:1px solid #ccc; margin-bottom:8px; cursor:zoom-in;' /></a>")
+            md_content.append(f"![图片{idx+1}]({rel_img_path})")
             md_content.append("")
-            md_content.append(f"<b>结构化描述：</b><br>{desc}")
+            md_content.append(f"**结构化描述：**\n{desc}")
             md_content.append("</details>")
             md_content.append("")
     else:
@@ -365,7 +372,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
     if methodology:
-        md_content.append(format_methodology_analysis(methodology))
+        md_content.append(_unwrap_markdown_block(str(methodology)))
     else:
         md_content.append("<p>未进行方法学分析或无结果。</p>")
     md_content.append("</details>")
@@ -469,6 +476,138 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         md_content.append(generate_default_mindmap("未能生成脑图"))
     md_content.append("</details>")
     md_content.append("")
+
+    # 7. 参考文献信息
+    references = results.get("references_data", {}).get("full_references_details", [])
+    md_content.append("## 7. 参考文献信息")
+    md_content.append("<details open>")
+    md_content.append("<summary>点击展开/折叠</summary>")
+    md_content.append("")
+    if references and isinstance(references, list):
+        # 使用HTML表格，设置深色/浅色主题自适应样式，保证可读性
+        md_content.append("""
+<style>
+.slais-table th, .slais-table td {
+  padding: 10px 8px;
+  border: 1px solid #444;
+  font-size: 15px;
+  text-align: left;
+  min-width: 80px;
+}
+.slais-table th {
+  background: #222;
+  color: #fff;
+  font-weight: bold;
+}
+.slais-table td {
+  background: #181818;
+  color: #eee;
+}
+@media (prefers-color-scheme: light) {
+  .slais-table th { background: #f5f5f5; color: #222; }
+  .slais-table td { background: #fff; color: #222; }
+}
+</style>
+<table class="slais-table">
+  <thead>
+    <tr>
+      <th>DOI</th>
+      <th>标题</th>
+      <th>作者</th>
+      <th>期刊</th>
+      <th>发表日期</th>
+      <th>PMID</th>
+    </tr>
+  </thead>
+  <tbody>
+""")
+        for ref in references:
+            # 兼容 authors_str 为空但 authors 为列表的情况
+            authors_str = ref.get('authors_str')
+            if not authors_str and isinstance(ref.get('authors'), list):
+                authors_str = "; ".join(ref.get('authors'))
+            pub_date = ref.get('pub_date') or ref.get('publication_date') or ""
+            md_content.append(
+                f"<tr>"
+                f"<td>{ref.get('doi','')}</td>"
+                f"<td>{ref.get('title','')}</td>"
+                f"<td>{authors_str or ''}</td>"
+                f"<td>{ref.get('journal','')}</td>"
+                f"<td>{pub_date}</td>"
+                f"<td>{ref.get('pmid','')}</td>"
+                f"</tr>"
+            )
+        md_content.append("</tbody></table>")
+    else:
+        md_content.append("无参考文献信息。")
+    md_content.append("</details>")
+    md_content.append("")
+    md_content.append("\n---\n")
+
+    # 8. 相关文献信息
+    related_articles = results.get("related_articles_pubmed", [])
+    md_content.append("## 8. 相关文献信息")
+    md_content.append("<details open>")
+    md_content.append("<summary>点击展开/折叠</summary>")
+    md_content.append("")
+    if related_articles and isinstance(related_articles, list):
+        md_content.append("""
+<style>
+.slais-table th, .slais-table td {
+  padding: 10px 8px;
+  border: 1px solid #444;
+  font-size: 15px;
+  text-align: left;
+  min-width: 80px;
+}
+.slais-table th {
+  background: #222;
+  color: #fff;
+  font-weight: bold;
+}
+.slais-table td {
+  background: #181818;
+  color: #eee;
+}
+@media (prefers-color-scheme: light) {
+  .slais-table th { background: #f5f5f5; color: #222; }
+  .slais-table td { background: #fff; color: #222; }
+}
+</style>
+<table class="slais-table">
+  <thead>
+    <tr>
+      <th>PMID</th>
+      <th>标题</th>
+      <th>作者</th>
+      <th>期刊</th>
+      <th>发表日期</th>
+      <th>DOI</th>
+    </tr>
+  </thead>
+  <tbody>
+""")
+        for art in related_articles:
+            authors_str = art.get('authors_str')
+            if not authors_str and isinstance(art.get('authors'), list):
+                authors_str = "; ".join(art.get('authors'))
+            pub_date = art.get('pub_date') or art.get('publication_date') or ""
+            md_content.append(
+                f"<tr>"
+                f"<td>{art.get('pmid','')}</td>"
+                f"<td>{art.get('title','')}</td>"
+                f"<td>{authors_str or ''}</td>"
+                f"<td>{art.get('journal','')}</td>"
+                f"<td>{pub_date}</td>"
+                f"<td>{art.get('doi','')}</td>"
+                f"</tr>"
+            )
+        md_content.append("</tbody></table>")
+    else:
+        md_content.append("无相关文献信息。")
+    md_content.append("</details>")
+    md_content.append("")
+    md_content.append("\n---\n")
 
     # 页脚与自定义CSS
     md_content.append("<hr>")

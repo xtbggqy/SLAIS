@@ -117,12 +117,31 @@ class MetadataFetchingAgent:
             # 确保所有必需的字段都存在
             enriched_details = []
             for ref in full_details:
-                # 确保所有必需字段都有值(即使是空字符串)
+                # authors_str 优先用 authors 列表拼接
+                authors_list = ref.get("authors", [])
+                # 兼容 S2 返回 authors 为对象列表（如 [{'name': 'xxx'}, ...]）
+                if isinstance(authors_list, list) and authors_list:
+                    # 如果元素是字典（如 {'name': ...}），拼接 name 字段
+                    if all(isinstance(a, dict) and "name" in a for a in authors_list):
+                        authors_str = "; ".join(a["name"] for a in authors_list if "name" in a)
+                    else:
+                        authors_str = "; ".join(str(a) for a in authors_list)
+                else:
+                    authors_str = ref.get("authors_str", "")
+
+                # pub_date 优先用 pub_date，其次 publication_date，其次 year
+                pub_date = (
+                    ref.get("pub_date")
+                    or ref.get("publication_date")
+                    or (str(ref.get("year")) if ref.get("year") else "")
+                    or ""
+                )
+
                 ref_enriched = {
                     "doi": ref.get("doi", ""),
                     "title": ref.get("title", ""),
-                    "authors_str": ref.get("authors_str", ""),
-                    "pub_date": ref.get("pub_date", ""),
+                    "authors_str": authors_str,
+                    "pub_date": pub_date,
                     "journal": ref.get("journal", ""),
                     "abstract": ref.get("abstract", ""),
                     "pmid": ref.get("pmid", ""),
@@ -132,15 +151,12 @@ class MetadataFetchingAgent:
                     "citation_count": ref.get("citation_count", 0),
                     "s2_paper_id": ref.get("s2_paper_id", "")
                 }
-                
-                # 确保authors字段统一
-                if "authors" not in ref and "authors_str" in ref and ref["authors_str"]:
-                    ref_enriched["authors"] = ref["authors_str"].split("; ")
-                else:
-                    ref_enriched["authors"] = ref.get("authors", [])
-                
+
+                # authors 字段保留原始结构
+                ref_enriched["authors"] = authors_list if authors_list else []
+
                 enriched_details.append(ref_enriched)
-                
+            
             references_data["full_references_details"] = enriched_details
             
             # 验证参考文献DOI数据质量
