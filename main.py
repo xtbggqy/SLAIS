@@ -376,26 +376,10 @@ async def main_async():
         logger.error("文章处理流程未能生成有效结果。")
 
 def main():
-    # 设置uvloop作为事件循环策略（如果已安装且在非Windows环境）
-    # try:
-    #     import uvloop
-    #     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    #     logger.info("使用uvloop事件循环策略。")
-    # except ImportError:
-    #     logger.info("uvloop未安装，使用默认事件循环策略。")
-    #     pass
-    
-    # 对于Windows，asyncio.run() 默认使用 ProactorEventLoop，通常是合适的。
-    # 对于其他平台，SelectorEventLoop是默认的。
+    """
+    主入口函数，简化脚本结构，便于管理和调用。
+    """
     asyncio.run(main_async())
 
 if __name__ == "__main__":
-    # 为了使此脚本可以直接从根目录运行，并且能够找到slais和agents模块，
-    # 你可能需要确保项目根目录在PYTHONPATH中，或者在IDE中正确配置了项目结构。
-    # 一个简单的处理方式是在脚本开头临时将项目根目录添加到sys.path：
-    # import sys
-    # sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-    # 但更好的做法是正确安装项目（例如，使用 `pip install -e .` 如果有setup.py）
-    # 或依赖PYTHONPATH的设置。
-
     main()

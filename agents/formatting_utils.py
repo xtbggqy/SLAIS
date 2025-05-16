@@ -243,13 +243,6 @@ def format_methodology_analysis(methodology: Union[str, Dict[str, Any]]) -> str:
 def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     """
     生成一个美观的增强版Markdown报告。
-    
-    Args:
-        results: 分析结果字典
-        pdf_filename_stem: PDF文件名（不含扩展名）
-        
-    Returns:
-        格式化的Markdown报告文本
     """
     # 顶部标题和描述
     md_content = [
@@ -278,9 +271,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    
     if metadata:
-        # 尝试从pubmed_info或s2_info中获取更详细的元数据
         pubmed_info = metadata.get("pubmed_info", {})
         s2_info = metadata.get("s2_info", {})
 
@@ -290,7 +281,6 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         pub_date = pubmed_info.get('publication_date') or str(s2_info.get('year', 'N/A'))
         journal = pubmed_info.get('journal') or s2_info.get('venue', 'N/A')
         
-        # 创建美观的表格
         md_content.append("<table>")
         md_content.append("  <tr><th colspan='2' style='text-align:center;'>文献基本信息</th></tr>")
         md_content.append(f"  <tr><td><b>标题</b></td><td>{title}</td></tr>")
@@ -301,7 +291,6 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         md_content.append("</table>")
         md_content.append("")
         
-        # 添加Semantic Scholar和PubMed信息
         if s2_info:
             s2_abstract = s2_info.get('abstract')
             citation_count = s2_info.get('citationCount', 'N/A')
@@ -336,7 +325,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n") # 在元数据部分后添加分割线
+    md_content.append("\n---\n")
 
     # 新增：图片内容分析部分
     image_analysis = results.get("image_analysis", [])
@@ -349,11 +338,8 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         for idx, img in enumerate(image_analysis):
             img_path = img.get("image_path", "")
             desc = img.get("description", "")
-            # 尝试相对路径预览图片
             rel_img_path = img_path
-            # 如果 image_paths 是相对路径，优先用 image_paths 匹配
             if image_paths:
-                # 支持绝对路径转相对
                 for p in image_paths:
                     if p in img_path or Path(img_path).name == Path(p).name:
                         rel_img_path = p
@@ -361,8 +347,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
             md_content.append(f"<details>")
             md_content.append(f"<summary><b>图片 {idx+1}</b>: <code>{rel_img_path}</code></summary>")
             md_content.append("")
-            # 图片预览
-            md_content.append(f"<img src='{rel_img_path}' alt='图片{idx+1}' style='max-width:400px; border:1px solid #ccc; margin-bottom:8px;' />")
+            md_content.append(f"<a href='{rel_img_path}' target='_blank'><img src='{rel_img_path}' alt='图片{idx+1}' style='max-width:300px; border:1px solid #ccc; margin-bottom:8px; cursor:zoom-in;' /></a>")
             md_content.append("")
             md_content.append(f"<b>结构化描述：</b><br>{desc}")
             md_content.append("</details>")
@@ -371,7 +356,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         md_content.append("<p>未检测到图片或图片内容分析结果。</p>")
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n") # 图片分析后分割线
+    md_content.append("\n---\n")
 
     # 2. 方法学分析
     methodology = results.get("methodology_analysis", "")
@@ -379,16 +364,13 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    
     if methodology:
-        # format_methodology_analysis 内部已处理字符串和字典情况
         md_content.append(format_methodology_analysis(methodology))
     else:
         md_content.append("<p>未进行方法学分析或无结果。</p>")
-    
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n") # 在方法学分析后添加分割线
+    md_content.append("\n---\n")
 
     # 3. 创新点提取
     innovations = results.get("innovation_extraction", "")
@@ -396,12 +378,10 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    
     if innovations:
         if isinstance(innovations, str):
-            md_content.append(_unwrap_markdown_block(innovations)) # 清理字符串
+            md_content.append(_unwrap_markdown_block(innovations))
         else:
-            # 核心创新点
             md_content.append("### 核心创新点")
             core_innovations = innovations.get('core_innovations', [])
             if core_innovations:
@@ -412,22 +392,15 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
                     md_content.append(f"- {core_innovations}")
             else:
                 md_content.append("- 未提取到核心创新点")
-            
             md_content.append("")
-            
-            # 解决的问题
             md_content.append("### 解决的问题")
             problem = innovations.get('problem_solved', 'N/A')
             md_content.append(f"{problem}")
             md_content.append("")
-            
-            # 新颖性
             md_content.append("### 与现有工作相比的新颖性")
             novelty = innovations.get('novelty_compared_to_existing_work', 'N/A')
             md_content.append(f"{novelty}")
             md_content.append("")
-            
-            # 潜在应用
             md_content.append("### 潜在应用")
             potential_apps = innovations.get('potential_applications', [])
             if potential_apps:
@@ -439,8 +412,6 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
             else:
                 md_content.append("- 未提取到潜在应用")
             md_content.append("")
-            
-            # 未来研究方向
             md_content.append("### 未来研究方向")
             future_dirs = innovations.get('future_research_directions_suggested', [])
             if future_dirs:
@@ -453,10 +424,9 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
                 md_content.append("- 未提取到未来研究方向")
     else:
         md_content.append("<p>未进行创新点提取或无结果。</p>")
-    
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n") # 在创新点提取后添加分割线
+    md_content.append("\n---\n")
 
     # 4. 问答对
     qa_pairs = results.get("qa_pairs", [])
@@ -464,15 +434,13 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    
     if qa_pairs and isinstance(qa_pairs, list):
         md_content.append(format_qa_pairs_for_markdown(qa_pairs))
     else:
         md_content.append("<p>未能生成问答对。</p>")
-    
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n") # 在问答对后添加分割线
+    md_content.append("\n---\n")
 
     # 5. 故事讲述
     story = results.get("story", "")
@@ -480,15 +448,13 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    
     if story:
-        md_content.append(_unwrap_markdown_block(story)) # 清理故事字符串
+        md_content.append(_unwrap_markdown_block(story))
     else:
         md_content.append("<p>未能生成文献故事。</p>")
-    
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n") # 在故事讲述后添加分割线
+    md_content.append("\n---\n")
 
     # 6. 脑图
     mindmap = results.get("mindmap", "")
@@ -496,25 +462,19 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    
     if mindmap:
-        # 格式化脑图代码
         formatted_mindmap = format_mermaid_code(mindmap)
         md_content.append(formatted_mindmap)
     else:
-        # 生成默认脑图
         md_content.append(generate_default_mindmap("未能生成脑图"))
-    
     md_content.append("</details>")
     md_content.append("")
 
-    # 添加页脚
+    # 页脚与自定义CSS
     md_content.append("<hr>")
     md_content.append("<footer>")
     md_content.append(f"<p><b>报告生成时间:</b> {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>")
     md_content.append("<p><i>此报告由 SLAIS (Scientific Literature AI Insight System) 自动生成</i></p>")
-    
-    # 添加CSS样式使报告更美观
     md_content.append("""
 <style>
   body { 
@@ -539,10 +499,10 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
   pre { background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
   hr { border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0; }
   footer { text-align: center; margin-top: 50px; font-size: 0.9em; color: #7f8c8d; }
+  img { transition: box-shadow 0.2s; }
+  img:hover { box-shadow: 0 0 8px #2980b9; }
 </style>
 """)
-    
     md_content.append("</footer>")
 
-    # 将所有元素连接为字符串
     return "\n".join(md_content)
