@@ -14,9 +14,26 @@ from agents.prompts import (
     METHODOLOGY_ANALYSIS_PROMPT,
     INNOVATION_EXTRACTION_PROMPT,
     QA_GENERATION_PROMPT,
-    BATCH_ANSWER_GENERATION_PROMPT
+    BATCH_ANSWER_GENERATION_PROMPT,
+    STORYTELLING_PROMPT, # 导入 STORYTELLING_PROMPT
+    MINDMAP_PROMPT, # 导入 MINDMAP_PROMPT
+    DEEP_ANALYSIS_PROMPT # 导入 DEEP_ANALYSIS_PROMPT
 )
 from slais import config
+
+# 辅助函数，用于在MindMapAgent生成失败时提供默认的Mermaid图
+def generate_default_mindmap_on_error(error_message: str) -> str:
+    """生成一个默认的脑图，显示错误信息。"""
+    return f"""```mermaid
+graph TD
+    A[生成失败] --> B[脑图生成过程中出错]
+    B --> C["{error_message}"]
+    C --> D1[可能原因1: LLM响应问题]
+    C --> D2[可能原因2: 输入文本过长]
+    C --> D3[可能原因3: 格式解析错误]
+    D1 --> E[请查看日志获取详细错误信息]
+```
+"""
 
 class MethodologyAnalysisAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
@@ -38,19 +55,31 @@ class MethodologyAnalysisAgent(BaseResearchAgent):
             truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
             chain = self._build_chain(METHODOLOGY_ANALYSIS_PROMPT)
             # 传递图像分析内容
-            response = await chain.ainvoke({
+            input_data = {
                 "content": truncated_content,
-                "image_analysis": image_analysis  # 添加图像分析内容
-            }, config={"callbacks": callbacks})
-            response_text = response.get("text", str(response))
+                "image_analysis": image_analysis
+            }
+            response_text = await super()._invoke_llm_analysis(
+                METHODOLOGY_ANALYSIS_PROMPT,
+                input_data,
+                callbacks
+            )
+            # _invoke_llm_analysis 已经处理了 .content 和基本错误
+            # 此处可以添加特定于此 Agent 的后处理或错误处理
+            if response_text.startswith("错误："): # 基类方法返回的错误信息
+                return response_text # 直接返回错误信息
+            
             logger.debug(f"方法分析原始响应: {response_text[:200]}...")
-            return response_text if isinstance(response_text, str) else str(response_text)
-        except json.JSONDecodeError:
-            logger.warning("方法学分析未能解析JSON，返回原始文本。")
+            # 尝试解析JSON的逻辑可以保留，如果提示要求JSON输出的话，但当前提示是Markdown
+            # try:
+            #     # parsed_response = json.loads(response_text)
+            #     # return parsed_response
+            # except json.JSONDecodeError:
+            #     logger.warning("方法学分析未能解析JSON（如果预期是JSON的话），返回原始文本。")
             return response_text
-        except Exception as e:
-            logger.error(f"方法分析时发生错误: {str(e)}")
-            return f"错误：方法学分析失败 ({e})"
+        except Exception as e: # 捕获在准备输入或调用基类方法之前可能发生的其他错误
+            logger.error(f"准备或执行方法学分析时发生意外错误: {str(e)}")
+            return f"错误：方法学分析准备失败 ({e})"
 
     async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> Dict[str, Any]:
         """实现抽象的run方法。"""
@@ -76,19 +105,28 @@ class InnovationExtractionAgent(BaseResearchAgent):
             truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
             chain = self._build_chain(INNOVATION_EXTRACTION_PROMPT)
             # 传递图像分析内容
-            response = await chain.ainvoke({
+            input_data = {
                 "content": truncated_content,
-                "image_analysis": image_analysis  # 添加图像分析内容
-            }, config={"callbacks": callbacks})
-            response_text = response.get("text", str(response))
+                "image_analysis": image_analysis
+            }
+            response_text = await super()._invoke_llm_analysis(
+                INNOVATION_EXTRACTION_PROMPT,
+                input_data,
+                callbacks
+            )
+            if response_text.startswith("错误："):
+                return response_text
+                
             logger.debug(f"创新点提取原始响应: {response_text[:200]}...")
-            return response_text if isinstance(response_text, str) else str(response_text)
-        except json.JSONDecodeError:
-            logger.warning("创新点提取未能解析JSON，返回原始文本。")
+            # try:
+            #     # parsed_response = json.loads(response_text)
+            #     # return parsed_response
+            # except json.JSONDecodeError:
+            #     logger.warning("创新点提取未能解析JSON（如果预期是JSON的话），返回原始文本。")
             return response_text
         except Exception as e:
-            logger.error(f"创新点提取时发生错误: {str(e)}")
-            return f"错误：创新点提取失败 ({e})"
+            logger.error(f"准备或执行创新点提取时发生意外错误: {str(e)}")
+            return f"错误：创新点提取准备失败 ({e})"
 
     async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> Dict[str, Any]:
         """实现抽象的run方法。"""
@@ -102,12 +140,16 @@ class QAGenerationAgent(BaseResearchAgent):
         """构建并返回问答生成的链。"""
         if prompt_template_str == QA_GENERATION_PROMPT:
             input_variables = ["content", "num_questions", "image_analysis"]
+            prompt = PromptTemplate(template=prompt_template_str, input_variables=input_variables)
         elif prompt_template_str == BATCH_ANSWER_GENERATION_PROMPT:
             input_variables = ["content", "questions_json_list_string", "image_analysis"]
+            # 移除 validate_template=False，让其默认为 True，以便在初始化时进行验证
+            prompt = PromptTemplate(template=prompt_template_str, input_variables=input_variables)
         else:
-            input_variables = ["content", "image_analysis"]
-
-        prompt = PromptTemplate(template=prompt_template_str, input_variables=input_variables)
+            # 理论上这个分支不应该被 QAGenerationAgent 触及，因为其主要处理 QA_GENERATION_PROMPT 和 BATCH_ANSWER_GENERATION_PROMPT
+            # 但为了健壮性，可以保留或抛出错误
+            input_variables = ["content", "image_analysis"] # 假设一个通用情况
+            prompt = PromptTemplate(template=prompt_template_str, input_variables=input_variables)
         return prompt | self.llm_client
 
     async def generate_questions(
@@ -119,13 +161,22 @@ class QAGenerationAgent(BaseResearchAgent):
         logger.info(f"生成问题，内容长度: {len(content)} 字符 (传递给分析前)")
         try:
             truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
-            chain = self._build_chain(QA_GENERATION_PROMPT)
-            response = await chain.ainvoke({
+            input_data = {
                 "content": truncated_content,
                 "num_questions": config.settings.MAX_QUESTIONS_TO_GENERATE,
                 "image_analysis": image_analysis
-            }, config={"callbacks": callbacks})
-            response_text = response.get("text", str(response))
+            }
+            response_text = await super()._invoke_llm_analysis(
+                QA_GENERATION_PROMPT,
+                input_data,
+                callbacks,
+                cache_content_key="content" # 明确用于缓存哈希的内容字段
+            )
+            if response_text.startswith("错误："):
+                # 如果基类方法返回错误，则直接返回空列表或错误信息
+                logger.error(f"问题生成失败: {response_text}")
+                return []
+                
             logger.debug(f"问题生成原始响应: {response_text[:200]}...")
             questions = self._extract_questions_from_text(response_text)
             return questions
@@ -158,24 +209,24 @@ class QAGenerationAgent(BaseResearchAgent):
             template=BATCH_ANSWER_GENERATION_PROMPT,
             input_variables=["content", "questions_json_list_string", "image_analysis"]
         )
-        # 假设 _create_llm_chain 内部也使用 LLMChain，并进行相应替换
-        # 如果 _create_llm_chain 是一个简单包装，可以直接替换为:
-        # chain = prompt_template | self.llm_client
-        # 为保持现有结构，我们假设 _create_llm_chain 也会被更新或其内部已更新
-        # 如果 _create_llm_chain 只是返回 LLMChain(llm=self.llm_client, prompt=prompt_template_obj)
-        # 那么这里可以直接写成 chain = prompt_template | self.llm_client
-        # 为了安全起见，暂时保留对 _create_llm_chain 的调用，并假设它会被同步修改
-        # 或者，如果 _create_llm_chain 只是简单地创建 LLMChain，我们可以直接替换
-        chain = prompt_template | self.llm_client # 直接替换
 
         try:
-            response = await chain.ainvoke({
-                "content": truncated_content, 
+            input_data = {
+                "content": truncated_content,
                 "questions_json_list_string": questions_json_list_string,
                 "image_analysis": image_analysis
-            }, config={"callbacks": callbacks})
-            response_text = response.get("text", str(response))
-            
+            }
+            response_text = await super()._invoke_llm_analysis(
+                BATCH_ANSWER_GENERATION_PROMPT,
+                input_data,
+                callbacks,
+                cache_content_key="content" # 或者更复杂的键，如 content + questions_json_list_string
+            )
+
+            if response_text.startswith("错误："):
+                logger.error(f"批量生成答案失败: {response_text}")
+                return [{"question": q, "answer": response_text} for q in questions]
+
             # 清理LLM响应，移除Markdown代码块标记
             cleaned_response_text = response_text.strip()
             if cleaned_response_text.startswith("```json"):
@@ -276,14 +327,20 @@ class StorytellingAgent(BaseResearchAgent):
     ) -> str:
         logger.info(f"以讲故事的方式讲述文献，内容长度: {len(content)} 字符")
         truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
-        chain = self._build_chain(prompts.STORYTELLING_PROMPT)
-        response = await chain.ainvoke({
+        input_data = {
             "content": truncated_content,
             "image_analysis": image_analysis
-        }, config={"callbacks": callbacks})
-        response_text = response.get("text", str(response))
+        }
+        response_text = await super()._invoke_llm_analysis(
+            STORYTELLING_PROMPT, # 使用 prompts.STORYTELLING_PROMPT
+            input_data,
+            callbacks
+        )
+        if response_text.startswith("错误："):
+            return response_text
+            
         logger.debug(f"讲故事原始响应: {response_text[:200]}...")
-        return response_text if isinstance(response_text, str) else str(response_text)
+        return response_text
 
     async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> str:
         """实现抽象的run方法。"""
@@ -295,7 +352,7 @@ class MindMapAgent(BaseResearchAgent):
 
     def _build_chain(self, prompt_template_str: str):
         """构建并返回生成脑图的链。"""
-        # 明确定义只使用"content"和"image_analysis"作为输入变量
+        # 提示模板的输入变量已在 prompts.py 中定义，此处无需重复明确
         prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
         
         # 添加诊断日志以便调试
@@ -313,37 +370,20 @@ class MindMapAgent(BaseResearchAgent):
         truncated_content = self._truncate_content(content, max_chars=config.settings.MAX_CONTENT_CHARS_FOR_LLM)
         
         try:
-            # 完全硬编码脑图生成提示，避免任何依赖
-            template_str = """请根据以下文献内容，生成一个概括全文逻辑结构的 Mermaid 格式的脑图（思维导图）。
-脑图应清晰地展示文献的主要章节、关键概念、研究流程或论证结构。
-请确保输出是有效的 Mermaid 语法代码块，例如：
-
-```mermaid
-graph TD
-    A[文献标题] --> B(引言)
-    B --> C[研究问题]
-    C --> D[方法]
-    D --> E[结果]
-    E --> F[讨论]
-    F --> G[结论]
-```
-
-文献内容：
-{content}
-
-请只返回 Mermaid 代码块，不要包含额外的解释文本。"""
-
-            # 创建全新的提示和链，避免任何潜在的变量/缓存问题
-            prompt = PromptTemplate(template=template_str, input_variables=["content", "image_analysis"])
-            chain = prompt | self.llm_client
-            
-            # 传递content和image_analysis参数
-            response = await chain.ainvoke({
-                "content": truncated_content, 
+            input_data = {
+                "content": truncated_content,
                 "image_analysis": image_analysis
-            }, config={"callbacks": callbacks})
-            response_text = response.get("text", str(response))
-            
+            }
+            response_text = await super()._invoke_llm_analysis(
+                MINDMAP_PROMPT,
+                input_data,
+                callbacks
+            )
+
+            if response_text.startswith("错误："):
+                # 返回一个可显示的默认脑图，表示生成失败
+                return generate_default_mindmap_on_error(response_text)
+
             # 使用formatting_utils中的格式化函数，避免重复逻辑
             from agents.formatting_utils import format_mermaid_code
             response_text = format_mermaid_code(response_text)
@@ -353,16 +393,106 @@ graph TD
         except Exception as e:
             logger.error(f"MindMapAgent.generate_mindmap中的意外错误: {e}")
             # 返回一个可显示的默认脑图，表示生成失败
-            return """```mermaid
-graph TD
-    A[生成失败] --> B[脑图生成过程中出错]
-    B --> C1[可能原因1: LLM响应问题]
-    B --> C2[可能原因2: 输入文本过长]
-    B --> C3[可能原因3: 格式解析错误]
-    C1 --> D[请查看日志获取详细错误信息]
-```
-"""
+            return generate_default_mindmap_on_error(f"MindMapAgent.generate_mindmap中的意外错误: {e}")
 
     async def run(self, content: str, image_analysis: str = "", callbacks: Optional[List[BaseCallbackHandler]] = None) -> str:
         """实现抽象的run方法。"""
         return await self.generate_mindmap(content, callbacks, image_analysis)
+
+class DeepAnalysisAgent(BaseResearchAgent):
+    def __init__(self, llm_client: Any):
+        super().__init__(llm_client, provider_name="openai")
+
+    def _build_chain(self, prompt_template_str: str):
+        """构建并返回深度分析的链。"""
+        # DEEP_ANALYSIS_PROMPT 需要 content, image_analysis, references_summary, related_articles_summary
+        prompt = PromptTemplate(
+            template=prompt_template_str, 
+            input_variables=["content", "image_analysis", "references_summary", "related_articles_summary"]
+        )
+        return prompt | self.llm_client
+
+    async def analyze_deeply(
+        self, 
+        content: str,
+        image_analysis: str = "",
+        references_summary: str = "无参考文献信息。", # 提供默认值
+        related_articles_summary: str = "无相关文献信息。", # 提供默认值
+        callbacks: Optional[List[BaseCallbackHandler]] = None
+    ) -> str:
+        """
+        执行深度文献分析。
+        
+        Args:
+            content: 主要文献的Markdown内容。
+            image_analysis: 主要文献的图片分析结果。
+            references_summary: 主要文献的参考文献摘要信息。
+            related_articles_summary: 相关文献的摘要信息。
+            callbacks: LangChain回调处理器列表。
+            
+        Returns:
+            Markdown格式的深度分析报告。
+        """
+        logger.info(f"开始深度文献分析，主文献内容长度: {len(content)} 字符")
+        
+        # 截断各个输入部分以适应LLM的上下文窗口限制
+        # 注意：这里的截断策略可能需要根据实际最大Token数和各部分重要性进行调整
+        # 假设总字符数限制为 MAX_CONTENT_CHARS_FOR_LLM，按比例分配
+        # 例如：主内容占60%，图片分析10%，参考文献15%，相关文献15%
+        # 这是一个简化的分配，实际可能需要更复杂的策略
+        
+        total_limit = config.settings.MAX_CONTENT_CHARS_FOR_LLM
+        
+        # 为了简单起见，我们先对每个部分进行单独截断，并记录日志
+        # 更好的做法是动态计算各部分长度，然后按比例或优先级截断
+        
+        truncated_content = self._truncate_content(content, max_chars=int(total_limit * 0.5)) # 主内容占50%
+        truncated_image_analysis = self._truncate_content(image_analysis, max_chars=int(total_limit * 0.1)) # 图片分析10%
+        truncated_references_summary = self._truncate_content(references_summary, max_chars=int(total_limit * 0.2)) # 参考文献20%
+        truncated_related_articles_summary = self._truncate_content(related_articles_summary, max_chars=int(total_limit * 0.2)) # 相关文献20%
+
+        logger.debug(f"深度分析输入截断后长度：主内容 {len(truncated_content)}, 图片分析 {len(truncated_image_analysis)}, 参考文献 {len(truncated_references_summary)}, 相关文献 {len(truncated_related_articles_summary)}")
+
+        # chain = self._build_chain(DEEP_ANALYSIS_PROMPT) # _invoke_llm_analysis 会处理
+        
+        try:
+            input_data = {
+                "content": truncated_content,
+                "image_analysis": truncated_image_analysis,
+                "references_summary": truncated_references_summary,
+                "related_articles_summary": truncated_related_articles_summary
+            }
+            response_text = await super()._invoke_llm_analysis(
+                DEEP_ANALYSIS_PROMPT,
+                input_data,
+                callbacks,
+                # 对于深度分析，可能需要更复杂的缓存键，例如基于所有输入部分的哈希
+                # 但为简单起见，仍使用 "content" (主文献内容) 作为主要哈希依据
+                cache_content_key="content" 
+            )
+
+            if response_text.startswith("错误："):
+                return response_text
+                
+            logger.debug(f"深度分析原始响应: {response_text[:200]}...")
+            return response_text
+        except Exception as e: # 捕获在准备输入或调用基类方法之前可能发生的其他错误
+            logger.error(f"准备或执行深度分析时发生意外错误: {str(e)}")
+            return f"错误：深度分析准备失败 ({e})"
+
+    async def run(
+        self, 
+        content: str, 
+        image_analysis: str = "", 
+        references_summary: str = "", 
+        related_articles_summary: str = "", 
+        callbacks: Optional[List[BaseCallbackHandler]] = None
+    ) -> str:
+        """实现抽象的run方法。"""
+        return await self.analyze_deeply(
+            content, 
+            image_analysis, 
+            references_summary, 
+            related_articles_summary, 
+            callbacks
+        )

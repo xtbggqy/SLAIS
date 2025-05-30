@@ -27,13 +27,14 @@ class ResearchAgent(BaseAgent):
         self.llm_client = llm_client
         self.provider_name = provider_name
         self.cache_manager = CacheManager() # Instantiate CacheManager
-        # self.chain = self._build_chain() # Chain should be built per call or with specific prompt
 
     @abstractmethod
-    def _build_chain(self, prompt_template_str: str) -> LLMChain:
+    def _build_chain(self, prompt_template_str: str) -> Any: # 返回类型可以是 LCEL 链
         """
-        构建并返回一个LLMChain。子类必须实现此方法以定义其特定的提示和链。
-        Builds and returns an LLMChain. Subclasses must implement this to define their specific prompt and chain.
+        构建并返回一个可执行的链 (例如 LangChain Expression Language runnable)。
+        子类必须实现此方法以定义其特定的提示和链。
+        Builds and returns an executable chain (e.g., a LangChain Expression Language runnable).
+        Subclasses must implement this to define their specific prompt and chain.
         """
         pass
 
@@ -68,67 +69,71 @@ class ResearchAgent(BaseAgent):
             "content_hash": hashlib.sha256(content.encode('utf-8')).hexdigest(), # Use content hash to avoid large keys
             "kwargs": relevant_kwargs
         }
+        # 将 kwargs 中的 content 移出，因为它用于生成哈希，其余的 kwargs 用于模板变量
+        content_for_hash = kwargs.pop("content", "") # 假设 content 总是存在于 kwargs 中用于哈希
+        key_data = {
+            "prompt_template": prompt_template_str,
+            "content_hash": hashlib.sha256(content_for_hash.encode('utf-8')).hexdigest(),
+            "kwargs": kwargs # 剩余的 kwargs 是模板变量
+        }
         return json.dumps(key_data, sort_keys=True, ensure_ascii=False)
 
-    async def _analyze(
+    async def _invoke_llm_analysis(
         self,
         prompt_template_str: str,
-        content: str,
-        prompt_vars: Optional[Dict[str, Any]] = None,
-        max_content_chars: Optional[int] = None
-    ) -> Any:
+        input_data: Dict[str, Any], # 包含所有模板变量的字典，包括截断后的内容
+        callbacks: Optional[List[BaseCallbackHandler]] = None,
+        cache_content_key: str = "content" # 指定用于生成缓存哈希的内容字段
+    ) -> str:
         """
-        使用LLM分析内容。
-        Analyzes content using the LLM.
+        通用的LLM分析执行方法，使用LCEL链并包含缓存逻辑。
+        
+        Args:
+            prompt_template_str: 用于构建链和缓存键的提示模板字符串。
+            input_data: 包含所有模板变量的字典。
+            callbacks: LangChain回调处理器列表。
+            cache_content_key: input_data 中用于生成缓存哈希的主要内容字段名。
+                               默认为 "content"，但对于 DeepAnalysisAgent 可能需要传入多个字段的组合或特定字段。
+                               为了简化，这里假设有一个主要的内容字段用于哈希。
+                               更复杂的哈希可以基于整个 input_data (排除回调)。
+
+        Returns:
+            LLM生成的文本内容或错误信息字符串。
         """
-        if prompt_vars is None:
-            prompt_vars = {}
+        # 准备用于生成缓存键的 kwargs，这里我们传递整个 input_data
+        # 但需要确保 content_for_hash 是从 input_data 中正确提取的
+        content_for_hash = input_data.get(cache_content_key, "")
+        
+        # 从 input_data 复制一份用于缓存键，避免修改原始 input_data
+        cache_key_kwargs = input_data.copy()
+        # 将实际用于哈希的内容放入 cache_key_kwargs 以便 _generate_cache_key 使用
+        cache_key_kwargs["content"] = content_for_hash 
 
-        # 不截断内容，直接使用完整内容
-        prompt_vars["content"] = content
 
-        try:
-            chain = self._build_chain(prompt_template_str) # Build chain with the specific prompt
-            response = await chain.arun(**prompt_vars) # Use arun for async
-            
-            # 直接返回响应内容，不尝试解析为 JSON
-            return response
-        except Exception as e:
-            logger.error(f"LLM分析过程中发生错误: {e}")
-            # An error occurred during LLM analysis: {e}
-            import traceback
-            logger.debug(f"错误详情 (Traceback): {traceback.format_exc()}")
-            return None # Or raise a custom exception
+        cache_key = self._generate_cache_key(prompt_template_str, "", cache_key_kwargs) # content 参数已包含在 cache_key_kwargs 中
 
-    async def analyze_with_prompt(
-        self, 
-        prompt_template_str: str, 
-        content: str, 
-        callbacks: Optional[List[BaseCallbackHandler]] = None, # 新增 callbacks 参数
-        **kwargs
-    ) -> Any:
-        # Generate cache key
-        cache_key = self._generate_cache_key(prompt_template_str, content, kwargs)
-
-        # Check cache first
         cached_result = self.cache_manager.get(cache_key)
         if cached_result is not None:
-            logger.debug(f"Cache hit for analysis with prompt: {prompt_template_str[:50]}...")
+            logger.info(f"缓存命中，提示: {prompt_template_str[:50]}...")
             return cached_result
 
-        # If not in cache, proceed with LLM call
-        truncated_content = self._truncate_content(content, config.settings.MAX_CONTENT_CHARS_FOR_LLM)
-        chain = self._create_llm_chain(prompt_template_str)
+        logger.info(f"缓存未命中，执行LLM分析，提示: {prompt_template_str[:50]}...")
+        chain = self._build_chain(prompt_template_str) # 子类实现此方法返回 LCEL 链
+
         try:
-            # 将 callbacks 传递给 arun
-            response_text = await chain.arun(content=truncated_content, callbacks=callbacks, **kwargs)
-
-            # Cache the result
+            response = await chain.ainvoke(
+                input_data,
+                config={"callbacks": callbacks}
+            )
+            
+            response_text = response.content if hasattr(response, 'content') else str(response)
+            
             self.cache_manager.set(cache_key, response_text)
-            logger.debug(f"Cached result for analysis with prompt: {prompt_template_str[:50]}...")
-
+            logger.info(f"结果已缓存，提示: {prompt_template_str[:50]}...")
             return response_text
         except Exception as e:
             logger.error(f"LLM分析过程中发生错误: {e}")
-            logger.debug(f"错误详情: {kwargs}, Prompt: {prompt_template_str[:100]}")
+            import traceback
+            logger.debug(f"错误详情 (Traceback): {traceback.format_exc()}")
+            logger.debug(f"输入数据: {input_data}")
             return f"错误：LLM分析失败 ({e})"

@@ -1,8 +1,0 @@
-2025-05-31 00:18:30,874 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250531_001826.log
-2025-05-31 00:18:30,874 - slais_app - INFO - 模块加载时配置检查：
-2025-05-31 00:18:30,874 - slais_app - INFO - ARTICLE_DOI: 10.1126/science.aao4593
-2025-05-31 00:18:30,875 - slais_app - INFO - SEMANTIC_SCHOLAR_API_BATCH_SIZE: 25
-2025-05-31 00:18:30,875 - slais_app - INFO - MAX_QUESTIONS_TO_GENERATE: 25
-2025-05-31 00:18:30,876 - slais_app - INFO - 默认进入Web UI模式或由Streamlit直接执行。
-2025-05-31 00:18:31,066 - slais_app - INFO - 脚本未在Streamlit环境中运行。尝试通过subprocess启动Streamlit。
-2025-05-31 00:18:31,067 - slais_app - INFO - 执行: C:\Users\gqy17\miniforge3\envs\one_article\python.exe -m streamlit run D:\C\Documents\Program\Python_file\article\one_article\app.py

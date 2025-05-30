@@ -245,8 +245,7 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
     md_content = [
         f"# 文献分析报告: {pdf_filename_stem}",
         "",
-        "<div align='center'><img src='logo.svg' height='120' alt='SLAIS Logo'></div>",
-        "",
+        # Logo 将在 Streamlit 页面中通过 st.image() 显示
         "---",
         "",
         "## 目录",
@@ -258,8 +257,9 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         "<li><a href='#4-问答对'>4. 问答对</a></li>",
         "<li><a href='#5-文献故事'>5. 文献故事</a></li>",
         "<li><a href='#6-文献逻辑脑图'>6. 文献逻辑脑图</a></li>",
-        "<li><a href='#7-参考文献信息'>7. 参考文献信息</a></li>",
-        "<li><a href='#8-相关文献信息'>8. 相关文献信息</a></li>",
+        "<li><a href='#7-深度文献分析'>7. 深度文献分析</a></li>",
+        # "<li><a href='#8-参考文献信息'>8. 参考文献信息</a></li>", # 已移除
+        # "<li><a href='#9-相关文献信息'>9. 相关文献信息</a></li>", # 已移除
         "</ul>",
         "",
         "---",
@@ -476,138 +476,21 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
         md_content.append(generate_default_mindmap("未能生成脑图"))
     md_content.append("</details>")
     md_content.append("")
+    md_content.append("\n---\n")
 
-    # 7. 参考文献信息
-    references = results.get("references_data", {}).get("full_references_details", [])
-    md_content.append("## 7. 参考文献信息")
+    # 7. 深度文献分析
+    deep_analysis_content = results.get("deep_analysis", "")
+    md_content.append("## 7. 深度文献分析")
     md_content.append("<details open>")
     md_content.append("<summary>点击展开/折叠</summary>")
     md_content.append("")
-    if references and isinstance(references, list):
-        # 使用HTML表格，设置深色/浅色主题自适应样式，保证可读性
-        md_content.append("""
-<style>
-.slais-table th, .slais-table td {
-  padding: 10px 8px;
-  border: 1px solid #444;
-  font-size: 15px;
-  text-align: left;
-  min-width: 80px;
-}
-.slais-table th {
-  background: #222;
-  color: #fff;
-  font-weight: bold;
-}
-.slais-table td {
-  background: #181818;
-  color: #eee;
-}
-@media (prefers-color-scheme: light) {
-  .slais-table th { background: #f5f5f5; color: #222; }
-  .slais-table td { background: #fff; color: #222; }
-}
-</style>
-<table class="slais-table">
-  <thead>
-    <tr>
-      <th>DOI</th>
-      <th>标题</th>
-      <th>作者</th>
-      <th>期刊</th>
-      <th>发表日期</th>
-      <th>PMID</th>
-    </tr>
-  </thead>
-  <tbody>
-""")
-        for ref in references:
-            # 兼容 authors_str 为空但 authors 为列表的情况
-            authors_str = ref.get('authors_str')
-            if not authors_str and isinstance(ref.get('authors'), list):
-                authors_str = "; ".join(ref.get('authors'))
-            pub_date = ref.get('pub_date') or ref.get('publication_date') or ""
-            md_content.append(
-                f"<tr>"
-                f"<td>{ref.get('doi','')}</td>"
-                f"<td>{ref.get('title','')}</td>"
-                f"<td>{authors_str or ''}</td>"
-                f"<td>{ref.get('journal','')}</td>"
-                f"<td>{pub_date}</td>"
-                f"<td>{ref.get('pmid','')}</td>"
-                f"</tr>"
-            )
-        md_content.append("</tbody></table>")
+    if deep_analysis_content:
+        md_content.append(_unwrap_markdown_block(str(deep_analysis_content)))
     else:
-        md_content.append("无参考文献信息。")
+        md_content.append("<p>未能生成深度文献分析报告或无结果。</p>")
     md_content.append("</details>")
     md_content.append("")
-    md_content.append("\n---\n")
-
-    # 8. 相关文献信息
-    related_articles = results.get("related_articles_pubmed", [])
-    md_content.append("## 8. 相关文献信息")
-    md_content.append("<details open>")
-    md_content.append("<summary>点击展开/折叠</summary>")
-    md_content.append("")
-    if related_articles and isinstance(related_articles, list):
-        md_content.append("""
-<style>
-.slais-table th, .slais-table td {
-  padding: 10px 8px;
-  border: 1px solid #444;
-  font-size: 15px;
-  text-align: left;
-  min-width: 80px;
-}
-.slais-table th {
-  background: #222;
-  color: #fff;
-  font-weight: bold;
-}
-.slais-table td {
-  background: #181818;
-  color: #eee;
-}
-@media (prefers-color-scheme: light) {
-  .slais-table th { background: #f5f5f5; color: #222; }
-  .slais-table td { background: #fff; color: #222; }
-}
-</style>
-<table class="slais-table">
-  <thead>
-    <tr>
-      <th>PMID</th>
-      <th>标题</th>
-      <th>作者</th>
-      <th>期刊</th>
-      <th>发表日期</th>
-      <th>DOI</th>
-    </tr>
-  </thead>
-  <tbody>
-""")
-        for art in related_articles:
-            authors_str = art.get('authors_str')
-            if not authors_str and isinstance(art.get('authors'), list):
-                authors_str = "; ".join(art.get('authors'))
-            pub_date = art.get('pub_date') or art.get('publication_date') or ""
-            md_content.append(
-                f"<tr>"
-                f"<td>{art.get('pmid','')}</td>"
-                f"<td>{art.get('title','')}</td>"
-                f"<td>{authors_str or ''}</td>"
-                f"<td>{art.get('journal','')}</td>"
-                f"<td>{pub_date}</td>"
-                f"<td>{art.get('doi','')}</td>"
-                f"</tr>"
-            )
-        md_content.append("</tbody></table>")
-    else:
-        md_content.append("无相关文献信息。")
-    md_content.append("</details>")
-    md_content.append("")
-    md_content.append("\n---\n")
+    
 
     # 页脚与自定义CSS
     md_content.append("<hr>")
@@ -642,6 +525,8 @@ def generate_enhanced_report(results: dict, pdf_filename_stem: str) -> str:
   img:hover { box-shadow: 0 0 8px #2980b9; }
 </style>
 """)
+    # 移除用于平滑滚动的脚本，Streamlit 可能不支持或阻止其执行
+    # 如果需要平滑滚动，应寻找 Streamlit 原生或社区支持的解决方案
     md_content.append("</footer>")
 
     return "\n".join(md_content)

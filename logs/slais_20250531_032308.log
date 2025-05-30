@@ -1,0 +1,12 @@
+2025-05-31 03:31:56,519 - slais_app - INFO - 模块加载时配置检查：
+2025-05-31 03:31:56,520 - slais_app - INFO - ARTICLE_DOI: 10.1126/science.aao4593
+2025-05-31 03:31:56,520 - slais_app - INFO - SEMANTIC_SCHOLAR_API_BATCH_SIZE: 25
+2025-05-31 03:31:56,521 - slais_app - INFO - MAX_QUESTIONS_TO_GENERATE: 25
+2025-05-31 03:31:56,521 - slais_app - INFO - 默认进入Web UI模式或由Streamlit直接执行。
+2025-05-31 03:31:56,521 - slais_app - INFO - 脚本已在Streamlit环境中运行。调用 run_web_app()。
+2025-05-31 03:31:56,533 - slais_app - INFO - Web app 从 session_state 获取的 stage_times: {'PDF内容解析': '03:27:20', '图片内容分析': '03:27:24', '元数据获取': '03:27:56', 'LLM初步分析': '03:28:11', '问答对生成': '03:29:06', '参考文献获取': '03:31:20', '相关文章获取': '03:31:26', '深度文献分析': '03:31:56'}
+2025-05-31 03:31:56,533 - slais_app - INFO - Web app 从 session_state 获取的 stage_status: {'PDF内容解析': '完成', '图片内容分析': '完成', '元数据获取': '完成', 'LLM初步分析': '完成', '问答对生成': '完成', '参考文献获取': '完成', '相关文章获取': '完成', '深度文献分析': '完成'}
+2025-05-31 03:31:56,533 - slais_app - INFO - Web app 从 session_state 获取的 stage_costs: {'PDF内容解析': 14.933735, '图片内容分析': 4.192768, '元数据获取': 31.603865, 'LLM初步分析': 15.290112, '问答对生成': 54.912047, '参考文献获取': 133.463364, '相关文章获取': 6.485962, '深度文献分析': 29.529848}
+2025-05-31 03:31:56,537 - slais_app - INFO - 增强版Markdown分析报告已保存到: output\tmpz7_994yy\tmpz7_994yy_analysis_report_20250531_033156.md
+2025-05-31 03:31:56,544 - slais_app - INFO - CSV报告已保存到: output\tmpz7_994yy\tmpz7_994yy_references_20250531_033156.csv (成功写入 71/71 条记录)
+2025-05-31 03:31:56,548 - slais_app - INFO - CSV报告已保存到: output\tmpz7_994yy\tmpz7_994yy_related_pubmed_20250531_033156.csv (成功写入 50/50 条记录)

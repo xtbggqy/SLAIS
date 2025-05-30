@@ -5,16 +5,8 @@ from pathlib import Path
 
 from app import process_article_pipeline
 from slais import config
-from pathlib import Path
-
-def get_log_file_path():
-    # 获取最新的日志文件路径
-    log_dir = Path(config.settings.LOG_DIR)
-    if not log_dir.exists():
-        return None
-    log_files = sorted(log_dir.glob("slais_*.log"), reverse=True)
-    return log_files[0] if log_files else None
-from slais import config
+# 从 slais.utils.logging_utils 导入 get_log_file_path 和 logger
+from slais.utils.logging_utils import get_log_file_path, logger
 
 # 确保nest_asyncio在导入其他模块前应用
 nest_asyncio.apply()

@@ -4,6 +4,7 @@ import os
 import datetime
 import re
 import errno
+from pathlib import Path # 导入 Path 类
 
 # 从 ..config 导入配置变量
 from ..config import LOG_LEVEL, LOG_DIR, LOG_FILE
@@ -139,8 +140,18 @@ def setup_logging():
     # root_logger = logging.getLogger()
     # root_logger.addFilter(log_filter) # 谨慎添加，可能影响其他非本项目日志
 
-    # 记录启动消息 - 现在由调用者（如main.py）在setup_logging后记录
-    logger.info(f"SLAIS 日志系统已启动 - 日志文件: {LOG_FILE}")
+# 记录启动消息 - 现在由调用者（如main.py）在setup_logging后记录
+logger.info(f"SLAIS 日志系统已启动 - 日志文件: {LOG_FILE}")
 
 # 注意：不再在模块导入时自动记录 "SLAIS 应用程序启动" 消息。
 # setup_logging() 函数需要被显式调用。
+
+def get_log_file_path():
+    """
+    获取最新的日志文件路径。
+    """
+    log_dir = Path(LOG_DIR) # 使用配置中的 LOG_DIR
+    if not log_dir.exists():
+        return None
+    log_files = sorted(log_dir.glob("slais_*.log"), reverse=True)
+    return log_files[0] if log_files else None

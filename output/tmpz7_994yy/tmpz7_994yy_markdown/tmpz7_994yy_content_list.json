@@ -1,0 +1,515 @@
+[
+    {
+        "type": "text",
+        "text": "Review ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "The ecology of plant extinctions ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Richard T. Corlett 1 ,2 , \\* ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Extinctions occur when enough individual plants die without replacement to extirpate a population, and all populations are extirpated. While the ultimate drivers of plant extinctions are known, the proximate mechanisms at individual and population level are not. The fossil record supports climate change as the major driver until recently, with land-use change dominating in recent millennia. Climate change may regain its leading role later this century. Documented recent extinctions have been few and concentrated among narrow-range species, but population extirpations are frequent. Predictions for future extinctions often use flawed methods, but more than half of all plants could be threatened by the end of this century. We need targeted interventions tailored to the needs of each threatened species. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "What do we need to know? ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Extinction is the loss of the last individual of a species. Extinctions can be local – extirpations (see Glossary) – when the loss is from only part of the range, or global, when a species is lost from its entire range. To prevent extinctions, we need to understand how and why they occur, starting with increased deaths and/or reduced fecundity of individuals, and scaling up through population extirpations to species extinctions. A better understanding of past extinctions can inform conservation of similar species and help narrow down broad, generic threats and focus on key processes and mechanisms driving future extinctions. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Both the ultimate drivers and proximate mechanisms for extinctions of vertebrates and some invertebrates are fairly well understood, but while plant extinctions share the same ultimate drivers, the proximate causes – the immediate causes of increased deaths and reduced fecundity – are largely unknown and have rarely been investigated. The ultimate drivers of modern plant extinctions are similar to those for animals: land-use change [1]; unsustainable harvesting [2]; invasive pests and pathogens [3,4]; a potentially large, near-future impact from anthropogenic climate change [5]; and a probable contribution from lost biotic interactions [6] (Table 1). Controlling these drivers will undoubtedly reduce extinctions, but saving individual populations and species requires an understanding of how these general threats interact with the biology of each species, so that the specific ecological factors limiting persistence and recovery can be identified and mitigated [7,8]. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "In order to understand how plant extinctions happen, I first review evidence from past extinctions, using data from phylogenies, and from the fossil and historical records. I then look at the results from revisitation and experimental studies, and review correlates of extinction risk and predictions for future extinctions. Finally, I summarize what is known about proximate causes of extirpations and extinctions, and suggest how knowledge gaps can be filled. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Past extinctions ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Inference from molecular phylogenies ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Analyses of time-calibrated phylogenies of extant taxa using birth–death models have been widely used to infer both speciation and extinction rates, but Louca and Pennell [9] demonstrated that, for ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Highlights ",
+        "text_level": 1,
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "The fossil record suggests that climate change was the major driver of plant extinctions and regional extirpations from the Pliocene until recently, when anthropogenic habitat loss became dominant. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Known recent plant extinctions are disproportionately few in comparison with well-studied animal taxa, but many more species are probably committed to inevitable extinction unless given targeted support. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Recent warm-edge extirpations demonstrate the growing impact of anthropogenic climate change and show that predictions of massive climate-driven extinctions later this century are plausible. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "The proximate causes for population extirpations are still rarely known but are likely to be highly varied and both species and location specific. ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "1 Center for Integrative Conservation   \nand Yunnan Key Laboratory for the   \nConservation of Tropical Rainforests   \nand Asian Elephants, Xishuangbanna   \nTropical Botanical Garden, Chinese   \nAcademy of Sciences, Yunnan 6663030,   \nChina   \n2 Honorary Research Associate, Royal   \nBotanic Gardens Kew, Richmond,   \nTW9 3AE, UK ",
+        "page_idx": 0
+    },
+    {
+        "type": "text",
+        "text": "Trends in Ecology & Evolution ",
+        "text_level": 1,
+        "page_idx": 1
+    },
+    {
+        "type": "table",
+        "img_path": "images/652eeadba6a28e440ca6de223743bb5c631280dd9f4b6df76685d99cfc46a9cb.jpg",
+        "table_caption": [
+            "Table 1. Sources of evidence for the major drivers of plant extinctions "
+        ],
+        "table_footnote": [
+            "a n.a., not applicable. "
+        ],
+        "table_body": "\n\n<html><body><table><tr><td>Driver</td><td>Paleo-record</td><td>Recent</td><td>Refs</td></tr><tr><td>Climate change</td><td>Throughout</td><td>Revisitationstudies,experiments,modeling</td><td>[12-14,35,67,68]</td></tr><tr><td>Land-use change</td><td>Recent record</td><td>Revisitationstudies</td><td>[28-31,40]</td></tr><tr><td>Invasive species</td><td> n.a.a</td><td>Revisitationstudies</td><td>[3,4,24,40]</td></tr><tr><td>Direct exploitation</td><td>n.a.</td><td>Revisitationstudies,market surveys</td><td>[2,21]</td></tr><tr><td>Loss of mutualists</td><td>n.a.</td><td>Experiments, modeling</td><td>[6]</td></tr></table></body></html>\n\n",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "any given phylogeny, there was an infinite number of equally likely models. New developments in the analysis of phylogenetic data provide ways of dealing with some of these issues [10], but phylogenies of extant taxa will usually miss at least part of the history of the wider clade. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Fossil record ",
+        "text_level": 1,
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Most plant species that ever existed are extinct, but the spatial and temporal patchiness of the fossil record, and the incompleteness of the specimens found, make it difficult to interpret in terms of mechanisms [11]. Rare or upland species are unlikely to be fossilized and, even for common lowland species, the first record may be long after first appearance and the last long before extinction. Pollen and spores provide a more complete record than macrofossils, but the taxonomic resolution is lower and insect-pollinated taxa are usually missing. The fossil record is best for genera, particularly those which still survive somewhere. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Paleo-records from previous periods of rapid climate change show the importance of movement as a response, rather than acclimation or evolution, and the individualistic responses of each species [12]. In Europe, the current cool-temperate tree flora, which is impoverished compared with East Asia and eastern North America, originated by the progressive loss of cold- and drought-sensitive lineages from the late Pliocene onwards [13]. Most losses are consistent with deterministic ecological sorting, since the lineages lost are more cold- and drought-sensitive than those that persisted, but losses of some cold-tolerant taxa suggest that other mechanisms may have also been involved [14]. Moreover, the timing and duration of the extinction process varied greatly across species and populations. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Most estimates of the background extinction rate for vascular plants from the fossil record and phylogenies have been in the range 0.05–0.15 extinctions per million species per year [15]. The incompleteness of the fossil record and problems with interpreting phylogenies in this way mean these estimates should be treated cautiously. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Pre-Linnaean anthropogenic extinctions ",
+        "text_level": 1,
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Much of the planet was transformed before modern botanical exploration started so there must have been many anthropogenic dark extinctions of species before they were described. A dramatic acceleration of extinction rates in large vertebrates – the megafaunal extinctions – marks the spread of modern humans out of Africa and across the Earth’s surface in the late Pleistocene and Holocene [16]. These extinctions, along with the increasing use of fire, transformed terrestrial ecosystems and the pollen record often shows large changes in vegetation. Evidence for consequent plant extinctions, however, is almost entirely from previously uninhabited oceanic islands first settled in the past 600 years by Europeans and their livestock. On St. Helena, for example, there have been eight recorded extinctions of endemic species since the first botanical records in 1771, while dark extinctions between European discovery in 1502 and 1771 were estimated at ten species [17]. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Glossary ",
+        "text_level": 1,
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Ancient environmental DNA: DNA extracted from nonrecent lake sediments. Useable DNA is rarely extracted from sources >1 million years old. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Birth–death models: models used to simulate the growth of phylogenetic trees. Two things can occur in a phylogenetic birth–death model: births, where a lineage splits into two, and deaths where a lineage dies out. These models have been widely used to estimate rates of both speciation and extinction, but extinction estimates are not reliable when only extant species can be sampled. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Botanical countries: these form level 3 of the standard World Geographical Scheme for Recording Plant Distributions. They are available for all recognized species in the World Checklist of Vascular Plants. Most equate to political countries, but large countries, such as China or Indonesia, are split into multiple botanical countries, and outlying areas of a country may be assigned to a different one. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Correlative species distribution models (SDMs): models that use species–environment relationships to explain and predict distributions of species. The observed distribution of a species is modeled as a function of current environmental conditions and this model is then used predict the distribution elsewhere or in the future. Dark extinctions: extinctions of species that have not been described by science. All extinctions before Linnaeus were dark and they continue today in areas with incompletely known floras. Distinguished from undocumented extinctions, which are overlooked extinctions of described species. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Extinction debt: expected future extinctions because of events in the past. For example, if habitat fragmentation or climate change leads to failure of regeneration, adult plants may persist for decades or centuries before the species becomes extinct. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Extinction risk: likelihood that a species will go extinct. In the IUCN Red Lists, listing in a higher extinction risk category implies a higher expectation of extinction over the time-frames specified. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Extirpation: loss of a species from an area while it still survives elsewhere. Also called local extinction. ",
+        "page_idx": 1
+    },
+    {
+        "type": "text",
+        "text": "Post-Linnean extinctions and extirpations ",
+        "text_level": 1,
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "The publication of Linnaeus’ Species Plantarum in 1753 is a convenient cut-off for recent extinctions, although the first edition included only 5940 names and most extinctions continued to be dark. In Singapore, which has an exceptionally well-documented tropical flora, an estimated $22 \\%$ of the 2076 species discovered in the 200 years since first European settlement have subsequently been extirpated, while total extirpations, including undiscovered species, are estimated at $34 \\%$ [18]. If, as seems probable, extirpation-prone rare species were more likely to be lost before being recorded, this should be interpreted as a lower bound. Three species lost from Singapore were apparently endemic and thus global extinctions. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "Globally, the total number of known post-Linnean plant extinctions is surprisingly low. In the International Union for Conservation of Nature (IUCN) Red Listi (accessed 15 October 2024), 126 vascular plants are listed as extinct $( \\boldsymbol { \\mathsf { E X } } )$ and 45 more as extinct in the wild but surviving in cultivation (EW). However, $< 2 0 \\%$ of known plant species have been evaluated and this was not a random subset. Moreover, many assessments are old and do not follow current IUCN recommendations on assessing extinction probability [19]. A 2019 study using all available data found that 571 species globally had become extinct over the past 250 years, with a similar number erroneously declared extinct and subsequently refound [20]. Five years later, total documented extinctions had risen to 962 species [21], with  the increase reflecting new data – and old data previously overlooked – not new extinctions. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "This total is certainly still an underestimate, but extinctions are hard to prove in plants. Plants do not sing, come to baits, or walk past camera traps, so even a large tree can be hard to detect, and the last few genetic individuals of a declining population could be dormant buried seeds. Undocumented extinctions of species that have been described but rarely recorded since are most likely in regions with hyperdiverse floras and limited biodiversity data, such as Madagascar [22]. The total of known plant extinctions is fewer in percentage terms than for well-studied animal groups $( 0 . 1 5 \\%$ of plants compared with $5 \\%$ of mammals and $7 \\%$ of birds [20]). Known extinctions are similarly low in two well-assessed continental floras, North America $( 0 . 4 \\%$ [23]) and Australia $( 0 . 1 5 \\%$ of plants versus $10 \\%$ of mammals and $3 . 5 \\%$ of birds [24]), and higher in South Africa $( 0 . 7 5 \\%$ [21]. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "Compared with vertebrates, plants are typically longer lived, may be clonal or have seed banks, and can often persist in very small numbers, all of which will delay extinction [25]. Unpaid extinction debts following habitat loss or other impacts are thus an additional complication. The lag time between an impact and the resulting extinctions may be decades or centuries, so species may continue to become extinct in transformed landscapes long after transformation has stopped [26]. These time lags may reflect one of more resistant life stages at the individual level, and/or persistence at the population or meta-population levels. The 962 documented post-Linnean extinctions may thus be only a fraction of the species committed to future extinction without appropriate conservation actions [27]. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "Revisitation studies ",
+        "text_level": 1,
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "Rates of individual mortality and population extirpation can be estimated by revisiting sites where the species was recorded previously. Ideally, the initial survey would include marking or accurately mapping populations or individual plants and be followed by continuous monitoring. Often, however, revisitation studies make use of historical information on species occurrences – including herbarium specimens – which can be of widely varying accuracy, spatial resolution, and completeness. In addition to $< 1 0 0 \\%$ probability of detection and redetection, revisitation will only find individuals or populations that have persisted since the first survey, while missing new sites that have been colonized since, unless a complete resurvey of the area is carried out [28]. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "Human footprint: impact of people on ecosystems, estimated from an aggregate of eight factors mapped at $\\mathsf { 1 - k m } ^ { 2 }$ resolution: major roads, navigable waterways, railways, croplands, pasture lands, built environments, night-time lights, and human population density. Mechanistic models: based on a theoretical understanding of the processes involved rather than on empirical data. Mechanistic models are fitted to a mathematical representation of the key processes of concern. Also called process-based models. Orphaned species: species that have lost a mutualistic partner on which they depended, such as a pollinator, seed dispersal agent, or mycorrhizal fungus. Orphaned species are potentially at risk of secondary extinction, but none have yet been documented for plants. ",
+        "page_idx": 2
+    },
+    {
+        "type": "text",
+        "text": "Trends in Ecology & Evolution ",
+        "text_level": 1,
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "Revisitation studies in Europe show high rates of loss for threatened species; often $20 \\mathrm { - } 5 0 \\%$ over multiple decades [28,29]. Outside Europe, the picture is mixed, with persistence high in some well-protected sites [30]. Permanent forest plots have low species turnovers, reflecting the slower vegetation dynamics in tree-dominated vegetation, but changes in tree recruitment and mortality at many sites can be attributed to climate change and warn of major shifts in forest community composition over future decades [31]. Most existing revisitation studies lack information on proximate causes of plant mortality and recruitment failure. This partly reflects the long gaps between visits in most studies, so that dead herbs often leave no traces. A shorter return time – ideally annually or twice a year – to at least some sites would allow a basic postmortem on dead plants. Tree deaths are often slow and dead trees persist longer, but some causes of mortality leave no external signs. ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "Experimental studies ",
+        "text_level": 1,
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "Experimental studies can confirm that correlations from observational studies are causal, and also provide an opportunity to identify proximate mechanisms. They can also investigate mechanisms that potentially influence extinction risk, such as plant–soil feedbacks [32], which cannot be observed directly. The perturbations most often investigated are habitat fragmentation, fire, grazing, nitrogen input, and changes in climatic variables, including temperature and moisture, but few studies are designed to identify drivers of individual species losses and in most cases the response variables measured are species richness, plant  size, cover,  or biomass, rather than changes in species composition. In one exception, an 18-year habitat connectivity experiment in pine savanna found that connected fragments had an annual extirpation rate $2 \\%$ lower than unconnected fragments, presumably because of demographic rescue of declining populations or rapid recolonization after extirpation, although mechanisms were not investigated [33]. ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "The most useful studies combine experiments with detailed, fine-scale observations. A 25-year study of a short-lived herb combined observation of marked individuals in heated and unheated plots with experimental seed introductions and plant surveys to both show that warming drives extirpation and to identify likely mechanisms, including reduced fecundity and survival across several life stages and purging of the below-ground seed bank [34]. In another study, reciprocal transplant experiments along elevational gradients were combined with fine-scale field surveys to assess the extirpation risk from climate change for Neotropical montane epiphytes [35]. Proximate mechanisms were not directly addressed, but mortality at warmer and drier sites occurred disproportionately in the dry season and was apparently caused by desiccation while at wetter sites it was more frequent in the wet season and often associated with rotting tissues. ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "Correlates of extinction risk ",
+        "text_level": 1,
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "Most documented post-1753 extinctions have been from areas with high plant diversity and tropical or Mediterranean-type climates, and half were from islands [20,21]. Extinct species had narrower ranges than plants as a whole and $80 \\%$ were woody perennials [20]. In North America, most were single-site endemics [23]. A study using critically endangered species with declining populations – suggesting imminent extinction – also found that island species dominated, with islands with known plant extinctions having higher human population densities and more invasive species [15]. Low original abundance and/or small range size are also strongly associated with extirpations in many local studies, on a variety of spatial scales [4,36]. Recently described plant species are more likely to become extinct [37], presumably because they usually have narrower ranges and lower abundances. Habitat specialists are also more likely to suffer extirpation, particularly those specializing on habitats that have experienced major area loss [4,24,29]. More generally, habitat specificity (number of habitat types) was the only consistent predictor of extinction risk for plants and a wide range of animal groups [38]. Species with narrower temperature niche widths are more likely to experience warming-related extirpations, and these niche widths are lower in tropical species [39]. ",
+        "page_idx": 3
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "The effects of life- and growth-form on extinction risk show no consistent pattern, except that epiphytes may be more vulnerable, suggesting they may be region and lineage specific [4,40,41]. Other plant traits, are, in general, poor predictors of extinction risk, with a lack of consistency across studies and between continents [41,42]. In some studies, extinction risk has a strong phylogenetic signal [18,43], but others have found none [41]. There is also a striking association between genome size and range size, with only small-genomed species occupying large ranges [44]. ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Predicting extinctions ",
+        "text_level": 1,
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "The IUCN Red List of Threatened Speciesi assesses extinction risk and is based on a standard set of criteria, but only $20 \\%$ of plant species have been assessed so far at the global level (versus almost $100 \\%$ of vertebrates). National and regional assessments include many additional species, but there are still large gaps, particularly in the tropics [27]. Red List assessment is slow because of the strict data requirements and a shortage of trained assessors, so statistical modeling using open-source data has an important role. These models can be divided into criteria-specific approaches, which estimate specific Red List criteria, and category-predictive approaches that assign Red List categories directly [45]. The most widely used criteria in the first approach are B1, based on extent of occurrence (EOO) [46], and A3, based on an inferred future decline in population [47]. The application of these criteria is usually simplified from IUCN guidelines because of data limitations. Category-predictive models are trained on existing Red List assessments. ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Model-derived predictions for future extinctions are most often based on habitat loss from landuse and/or climate change. Predictions of habitat loss from climate change usually come from correlative species distribution models (SDMs), but there are multiple problems with these $( \\mathsf { B o x \\ 1 } )$ ). Alternatives include mechanistic models [48] and using plant traits to predict ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Box 1. Use of correlative SDMs to assess extinction risk ",
+        "text_level": 1,
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Most estimates of extinction risk from climate change use correlative SDMs [5]. These relate the species distribution to current climatic and other environmental parameters and then use this relationship to predict areas with suitable conditions in future. The predicted changes in habitat are used to assess extinction risk by assuming that a species becomes extinct when $100 \\%$ (or $9 5 \\%$ ) of its range became unsuitable, or by using the categories and criteria of the IUCN Red List. These models are easy to run and with adequate data can reproduce the current distributions of species, but their use for predictions has many problems [64]. Moreover, the data is inadequate for many species, including the rare species of most concern [65]. Internal cross-validation of the models using a subset of the data likely overestimates model accuracy, and using historical data to predict the present has had varied results, with a recent study underpredicting extirpations in Sweden [66]. ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Even when the data are adequate, the same relationships may not hold under future conditions that are not currently available [67]. Extrapolating current relationships into the future also assumes that plants do not acclimate or adapt to changing climate, despite evidence that many do [5,58]. These limitations can be partly overcome by incorporating trait climate relationships into the modeling process, as has been done for reproductive phenology [68], or by using genomic data [58]. ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "SDMs typically show that some areas currently occupied will become unsuitable in the future, while new areas will become available elsewhere; often interpreted as predicting a shift in overall distribution. However, species may persist for decades in climatically unsuitable habitats at the trailing edge [69], while at the leading edge, occupation of newly available habitat will depend on dispersal ability [70]. SDM predictions are often implemented with two dispersal scenarios, unlimited and limited dispersal, assuming the truth lies somewhere between [46]. Moreover, SDMs are usually produced using coarse-grained macroclimatic data measured in open areas, while forest plants may persist under regional climate change in microclimatic refugia that such models cannot identify [71]. ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Different modeling algorithms for SDMs often produce different spatial predictions and the variability between different ways of combining these can be larger than that between different climate predictions [72]. Choosing between alternative predictions requires additional information, such as genomic data [73], unavailable for most threatened species. ",
+        "page_idx": 4
+    },
+    {
+        "type": "text",
+        "text": "Trends in Ecology & Evolution ",
+        "text_level": 1,
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "extinction risk [38,49]. It is also possible to combine different approaches, using correlative SDMs as a measure of exposure to climate change and mechanistic models or traits as predictors of vulnerability. Mechanistic models are expected to perform better than correlative SDMs under novel conditions where historical correlations may no longer apply, but require knowledge of the underlying mechanisms responsible for the current distribution and need more parameters [47]. ",
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "An alternative to using high-resolution data and thus excluding most rare and threatened species is to use coarse-scale data that is available for all species. A recent study used Bayesian Additive Regression Trees (BART) to predict the extinction risk for all angiosperms, using predictors from major correlates of extinction risk: range size (number of botanical countries), evolutionary history, lifeform, human footprint, and  biomes [45]. The model was trained on the species evaluated in the IUCN Red List (and thus incorporates its limitations [19]). Although it performed well generally, it misclassified some species, particularly threatened species with wide ranges, and the model did not include predictors for threats from overharvesting, invasive species, and climate change, which are difficult to assess on a global scale. ",
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "How many species will we lose? ",
+        "text_level": 1,
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "A recent study based on global and regional Red List assessments suggested that $3 9 \\%$ of all vascular plant species are threatened with extinction [27]. These assessments, however, did not include the full impacts of projected climate changes, which are expected to increase in future decades. Projected losses under climate change vary greatly; a study based on observations of species responses in recent decades suggested $23 \\mathrm { - } 3 1 \\%$ globally by 2070 [5], while an estimate for Central America and southern Mexico based on correlative SDMs was $5 8 – 6 7 \\%$ [47]. There are other slow-acting, hard-to-quantify threats, including invasive pathogens, pests, and competitors, which may cause additional losses, suggesting that more than half of all vascular plants could be threatened with extinction by the end of this century. For undescribed species, the relationship between year of description and probability of being threatened suggests that at least $7 7 \\%$ are threatened, reflecting the expected predominance of narrow-range endemics among the overlooked species [49]. ",
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "The striking contrast between the ${ > } 5 0 \\%$ extinctions projected and the $< 0 . 2 \\%$ observed demands explanation. The most likely reason for this mismatch is that the projected extinctions are delayed, reflecting high extinction debts and long lag times [25]. Support for this comes from multiple studies showing that historical landscapes better predict present-day plant diversities than modern landscapes [50]. The magnitude of the other anthropogenic threats to plant populations is also directly supported by the high rates of loss in revisitation studies and, for climate change, by the many recent observations of warm-edge contractions in species’ ranges [51]. ",
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "Proximate causes of population losses and extinctions ",
+        "text_level": 1,
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "Threats are treated individually here, but many species are subject to multiple threats and these may act in synergy, increasing impact [21,40,52]. Habitat loss is the most frequently cited driver of plant extirpations and extinctions, but the mechanistic basis of these losses if often unclear. When the only habitat of a population is entirely converted into a crop monoculture, the proximate cause of local extinction is either the conversion process or its immediate environmental consequences. However, when fragments of the habitat remain, or the entire habitat is degraded by changes to vegetation structure, or to the fire, grazing, nutrient, or hydrological regimes [3,21,40], the proximate causes are unclear and likely to vary among species. Note that delayed extinctions of species that have lost most of their habitat are often attributed to the driver that extirpated the last population, so the importance of earlier habitat loss is almost certainly underestimated. ",
+        "page_idx": 5
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 6
+    },
+    {
+        "type": "text",
+        "text": "Invasive alien species of plants, animals, or pathogens are frequently listed among drivers of species endangerment and increasingly as primary causes of extinctions $( > 1 0 0$ species) [21]. Invasive plants can cause plot-scale extirpations, and both these and the extinction risk for species on oceanic islands are increased when the native species is phylogenetically related to the invasive alien [53]. This specificity shows that the invaders are not just passive markers of habitat degradation, but does not identify the proximate mechanisms, which might include competition, hybridization, dilution of pollination or seed dispersal services, heterospecific pollen competition, or acting as a reservoir of pests and pathogens. Introduced goats, sheep, and rabbits are a major threat to many island plants, and direct involvement in extinctions is suspected but not well documented [21,40]. Although pests and pathogens have not been cited as the major cause of any extinction, the severity of recent outbreaks, particularly of fungal pathogens in Australia [3], suggests the role of less conspicuous outbreaks in the decline of narrow-range species may have been overlooked. ",
+        "page_idx": 6
+    },
+    {
+        "type": "text",
+        "text": "Numerous wild species are used for food, medicine, raw materials, or horticulture [54], but plants are only killed if harvested whole or too many essential organs are removed, and extirpations and extinctions are most likely with a combination of urban markets, preference for wild over cultivated material, and a value that increases enough with rarity to offset the increasing cost of finding additional individuals. A recent review found reports of 22 global extinctions or extinctions in the wild and 16 extirpations linked with trade, mostly for horticulture [2], while [21] lists 37 extinctions where overharvesting was the main cause. ",
+        "page_idx": 6
+    },
+    {
+        "type": "text",
+        "text": "Climate is the primary control of the geographical distributions of most plant species and climate change, unlike land-use change, is ubiquitous, but the proximate causes of climate-driven extirpations and extinctions are usually unclear. Two extinctions have so far been attributed principally to climate change, as well as one to drought and seven to wildfires; both of which may have been exacerbated by climate change [21]. Globally, most plants have been exposed over recent decades to increased temperature and vapor pressure deficits, and increased seasonality in moisture availability [52]. Surveys of plant and animal species over time showed that the absolute increase in the highest temperature during the year was the climatic factor most strongly associated with local extirpations [51], but this study did not identify the proximate cause of the plant deaths. For one herbaceous species, experimental warming resulted in rapid population declines and a local extirpation by reducing fecundity and survival across multiple life stages and depleting the seed bank [34]. Land plants typically depend for initial establishment on fine-scale microhabitats, with microclimates often more or less decoupled from the macroclimate [55], which probably accounts for much of the wide variation among species in their warming responses. ",
+        "page_idx": 6
+    },
+    {
+        "type": "text",
+        "text": "Secondary extinctions of orphaned species that depended on a locally or globally extinct mutualists have been predicted from simulation studies, but not documented for plants, possibly because of ecological redundancy or post-extinction rewiring of ecological networks. However, population declines have been reported, so the lack of extinctions may simply reflect the lag times typical of plant processes [6]. In temperate floras, plants with zygomorphic flowers have higher documented extinction risks, and both biotic pollination and dioecy have been supported as risks by multiple studies (though not all) [41]. A few natural extinctions have also been reported, one attributed to a hurricane and four to volcanic eruptions [21],  but it is  not  clear how  much the vulnerability of these species to natural causes had been increased by earlier anthropogenic habitat losses. Finally, the causes of $18 \\%$ of documented extinctions are unknown [21]. ",
+        "page_idx": 6
+    },
+    {
+        "type": "text",
+        "text": "Concluding remarks ",
+        "text_level": 1,
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "We still know little about the proximate causes of plant extirpations and extinctions, with most studies reporting general causes several steps removed from the final kill mechanism  (see Outstanding questions). We have most data for local extirpations, but little understanding of how individual plants die and why they are not replaced, how multiple individual deaths without replacement add up to extirpations, and how multiple extirpations become global extinctions. There is a need for more fine-scale studies of the decline and extirpation of isolated populations, recording the deaths of marked individuals and the recruitment of new individuals. These can be combined with large-scale revisitation studies to scale up the conclusions. Wherever possible, postmortem examinations should be done for dead plants to determine likely causes of death. Experimental manipulations of possible drivers of individual mortality could be used more widely and, as improved data becomes available, modeling needs to become more mechanistic. We also need a better understanding of how predicted range reductions – usually the major model output – influence extinction risk [56]. ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "This review has focused on species, as does almost all the relevant literature. Most species-level extinctions, however, follow losses of multiple, subspecific, evolutionary lineages and locally adapted populations [8,57]. Each of these may be more vulnerable to extinction than the species as a whole because they are more specialized and have fewer individuals, but the consequences of infraspecific differentiation for extinctions at the species level have rarely been investigated for plants [57,58]. The increasing availability of genomic data for endangered plant species and populations now make it possible to investigate not only the ecological responses of different populations to drivers such as climate change, but also their potential evolutionary responses [58,59]. Moreover, ancient environmental DNA from lake sediments has the potential to detect such evolutionary responses in the recent past [60]. ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "Despite gaps in our current understanding of plant extinctions, there is enough evidence to support predictions that a high proportion of the global flora – at least half – faces a significant extinction risk in the coming decades, and particularly in the second half of this century. The ultimate drivers of extinction are targeted by the 2022 Kunming-Montreal Global Biodiversity Frameworkii , but mitigation of these general threats needs to be combined with targeted interventions tailored to the needs of each threatened species [7,8,61]. We must act now, based on what we know already [62]. The tools are available to save every threatened plant species if we use them in time [63]. ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "Declaration of interests ",
+        "text_level": 1,
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "No interests are declared. ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "Resources ",
+        "text_level": 1,
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "i www.iucnredlist.org/en ii www.cbd.int/gbf ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "Outstanding questions ",
+        "text_level": 1,
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "What are the commonest proximate causes of declines in plant populations and how can they be recognized in the field? ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "How can we improve estimates of the prehuman background rate of plant species extinction? Can time-calibrated phylogenies of extant taxa help with this? ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "How does the existence of multiple distinct infraspecific lineages and locally adapted populations influence extirpations and the global extinction of a species? ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "Will losses of biotic interactions, including pollination, seed dispersal, and microbial mutualisms, accelerate plant extinctions? ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "Can the predictions of correlative SDMs be improved without making the models too difficult and datahungry to use? Many suggestions have been made for increasing the realism of SDM predictions for species losses from climate change, but most require additional parameters. ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "How well do existing IUCN Red  Lists predict extinction risk? Risk assessments in the IUCN Red List are not only used to mobilize support and funding, and to meet legal requirements, but are also used to train models that predict extinction risk for unlisted species. ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "The most frequent response to rapid climate change in the plant fossil record was movement, rather than acclimation, adaptation, or extinction. Will movement in response to recent anthropogenic climate change be fast enough to enhance survival and can we facilitate it? ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "References ",
+        "text_level": 1,
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "1. Moreira, H. et al. (2023) Threats of land use to the global diversity of vascular plants. Divers. Distrib. 29, 688–697   \n2. Hinsley, A. et al. (2023) Trading species to extinction: evidence of extinction linked to the wildlife trade. Camb. Prisms Extinction 1, e10   \n3. Martyn Yenson, A.J. et al. (2021) Introduction. In Plant Germplasm Conservation in Australia: Strategies and Guidelines for Developing, Managing and Utilising Ex Situ Collections (3rd edn) (Martyn Yelson, A.J. et al., eds), pp. 1–21, Australian Network for Plant Conversation   \n4. der Colff, Van et al. (2024) Drivers, predictors, and probabilities of plant extinctions in South Africa. Biodivers. Conserv. 32, 4313–4336   \n5. Wiens, J.J. and Zelinka, J. (2024) How many species will Earth lose to climate change? Glob. Change Biol. 30, e17125   \n6. Sandor, M.E. et al. (2022) Extinction of biotic interactions due to habitat loss could accelerate the current biodiversity crisis. Ecol. Appl. 32, e2608   \n7. Bolam, F.C. et al. (2023) Over half of threatened species require targeted recovery actions to avert human-induced extinction. Front. Ecol. Environ. 21, 64–70   \n8. Monks, L. et al. (2019) Recovery of threatened plant species and their habitats in the biodiversity hotspot of the Southwest Australian Floristic Region. Plant Divers. 41, 59–74 9. Louca, S. and Pennell, M.W. (2021) Why extinction estimates from extant phylogenies are so often zero. Curr. Biol. 31, 3168–3173   \n10. Morlon, H. et al. (2022) Studying speciation and extinction dynamics from phylogenies: addressing identifiability issues. Trends Ecol. Evol. 37, 497–506   \n11. Benson, R.B.J. et al. (2021) Biodiversity across space and time in the fossil record. Curr. Biol. 31, R1225–R1236   \n12. Fordham, D.A. et al. (2020) Using paleo-archives to safeguard biodiversity under climate change. Science 369, eabc5654   \n13. Svenning, J.-C. (2003) Deterministic Plio-Pleistocene extinctions in the European cool-temperate tree flora. Ecol. Lett. 6, 646–653   \n14. Vieira, M. et al. (2023) Niche evolution versus niche conservatism and habitat loss determine persistence and extirpation in late Neogene European Fagaceae. Quat. Sci. Rev. 300, 107896   \n15. Gray, A. (2019) The ecology of plant extinction: rates, traits, and island comparisons. Oryx 53, 424–428   \n16. Svenning, J.-C. et al. (2024) The late-Quaternary megafauna extinctions: patterns, causes, ecological consequences and implications for ecosystem management in the Anthropocene. Camb. Prisms Extinction 2, e5   \n17. Lamdon, P. and Cronk, Q. (2020) Extinction dynamics under extreme conservation threat: the flora of St Helena. Front. Ecol. Evol. 8, 41   \n18. Chisholm, R.A. et al. (2023) Two centuries of biodiversity discovery and loss in Singapore. Proc. Natl. Acad. Sci. 120, e2309034120   \n19. Fisher, D.O. and Humphreys, A.M. (2024) Evidence for modern extinction in plants and animals. Biol. Conserv. 298, 110772   \n20. Humphreys, A.M. et al. (2019) Global dataset shows geography and life form predict modern plant extinction and rediscovery. Nat. Ecol. Evol. 3, 1043–1047   \n21. Christenhusz, M.J.M. and Govaert, R. (2024) Plant extinction in the Anthropocene. Bot. J. Linn. Soc., Published online August 28, 2024 https://doi.org/10.1093/botlinnean/boae045   \n22. Vorontsova, M.S. et al. (2021) Inequality in plant diversity knowledge and unrecorded plant extinctions: an example from the grasses of Madagascar. Plants People Planet 3, 45–60   \n23. Knapp, W.M. et al. (2021) Vascular plant extinction in the continental United States and Canada. Conserv. Biol. 35, 360–368   \n24. Silcock, J.L. et al. (2020) To name those lost: assessing extinction likelihood in the Australian vascular flora. Oryx 54, 167–177   \n25. Cronk, Q. (2016) Plant extinctions take time. Science 353, 446–447   \n26. Chen, X. et al. (2023) Ecological time lags in biodiversity response to habitat changes. J. Environ. Manag. 346, 118965   \n27. Nic Lughadha, E. et al. (2020) Extinction risk and threats to plants and fungi. Plants People Planet 2, 389–408   \n28. Holderegger, R. and Spillmann, J. (2022) Do revisitation studies overestimate local extinction? Conserv. Sci. Pract. 4, e12797   \n29. Kempel, A. et al. (2020) Nationwide revisitation reveals thousands of local extinctions across the ranges of 713 threatened and rare plant species. Conserv. Lett. 13, e12749   \n30. Hoffman, W.A. et al. (2020) Understanding Species Persistence in Complex Landscapes with a Long-term Metapopulation Study of Rare Flora. SERDP Project RC-2707   \n31. Esquivel-Muelbert, A. et al. (2019) Compositional response of Amazon forests to climate change. Glob. Change Biol. 25, 39–56   \n32. Zettlemoyer, M.A. and Cortijo-Robles, K.M. (2023) Extant species are more responsive than locally extinct species to warming effects on soil communities. Plant Soil 485, 117–131   \n33. Damschen, E.I. et al. (2019) Ongoing accumulation of plant diversity through habitat connectivity in an 18-year experiment. Science 365, 1478–1480   \n34. Panetta, A.M. et al. (2018) Climate warming drives local extinction: evidence from observation and experimentation. Sci. Adv. 4, eaaq1819   \n35. Hollenbeck, E.C. and Sax, D.F. (2024) Experimental evidence of climate change extinction risk in Neotropical montane epiphytes. Nat. Commun. 15, 6045   \n36. Zettlemoyer, M.A. et al. (2019) Species characteristics affect local extinctions. Am. J. Bot. 106, 547–599   \n37. Brown, M.J.M. et al. (2023) Three in four undescribed plant species are threatened with extinction. New Phytol. 240, 1340–1344   \n38. Chichorro, F. et al. (2022) Trait-based prediction of extinction risk across terrestrial taxa. Biol. Conserv. 274, 109738   \n39. Grinder, R.M. and Wiens, J.J. (2023) Niche width predicts extinction from climate change and vulnerability of tropical species. Glob. Change Biol. 9, 618–630   \n40. Le Roux, J.J. et al. (2019) Recent anthropogenic plant extinctions differ in biodiversity hotspots and coldspots. Curr. Biol. 29, 2912–2918   \n41. Lughadha, Nic et al. (2017) Extinction risk and threats to plants. In State of the World’s Plants 2017 (Willis, K.J., ed.), pp. 72–77, Royal Botanic Gardens Kew   \n42. Pelletier, T.A. et al. (2018) Predicting plant conservation priorities on a global scale. Proc. Natl. Acad. Sci. 115, 13027–13032   \n43. Winter, M. et al. (2009) Plant extinctions and introductions lead to phylogenetic and taxonomic homogenization of the European flora. Proc. Natl. Acad. Sci. 106, 21721–21725   \n44. Bureš, P.  et al. (2024) (2024) The global distribution of angiosperm genome size is shaped by climate. New Phytol. 242, 744–759   \n45. Bachman, S.P. et al. (2024) Extinction risk predictions for the world’s flowering plants to support their conservation. New Phytol. 242, 797–808   \n46. Levin, M.O. et al. (2022) Using publicly available data to conduct rapid assessments of extinction risk. Conserv. Sci. Pract. 4, e12628   \n47. Ortega, M.A. et al. (2024) Climate change increases threat to plant diversity in tropical forests of Central America and southern Mexico. PLoS One 19, e0297840   \n48. Schouten, R. et al. (2020) Integrating dynamic plant growth models and microclimates for species distribution modelling. Ecol. Model. 435, 10926.3   \n49. Dudley, A. et al. (2019) Using traits to assess threatened plant species response to climate change. Biodivers. Conserv. 28, 1905–1919   \n50. Deák, B. et al. (2021) Different extinction debts among plants and arthropods after loss of grassland amount and connectivity. Biol. Conserv. 264, 109372   \n51. Román-Palacios, C.R. and Wiens, J.J. (2020) Recent responses to climate change reveal the drivers of species extinction and survival. Proc. Natl. Acad. Sci. 117, 4211–4217   \n52. Boonman, C.C.F. et al. (2024) More than 17,000 tree species are at risk from rapid global change. Nat. Commun. 15, 166   \n53. Pouteau, R. et al. (2023) Closely related aliens lead to greater extinction risk. Biol. Conserv. 284, 110148   \n54. Smith-Hall, C. et al. (2023) The sustainability of trade in wild plants – a data-integration approach tested on critically endangered Nardostachys jatamansi. PNAS Nexus 2, pgad328   \n55. Chardon, N.I. et al. (2024) Variable species establishment in response to microhabitat indicates different likelihoods of climate-driven range shifts. Ecography, Published  online June 19, 2024. https://doi.org/10.1111/ecog.07144   \n56. Fattorini, S. et al. (2021) Using the species-area relationship to predict extinctions resulting from habitat loss. In The Species–Area Relationship: Theory and Application (Matthews, T.J. et al., eds), pp. 345–365, Cambridge University Press   \n57. Levin, D.A. (2019) Intraspecific lineages as focal points in the extinction and persistence of species. Plant Syst. Evol. 305, 719–726   \n58. Aguirre-Liguori, J.A. et al. (2021) The evolutionary genomics of species’ responses to climate change. Nat. Ecol. Evol. 5, 1350–1360   \n59. Barratt, C.D. et al. (2024) Life on the edge: a new toolbox for population-level climate change vulnerability assessments. Methods Ecol. Evol., Published online October 7, 2024. https:// doi.org/10.1111/2041-210X.14429   \n60. Johnson, M.D. et al. (2023) Environmental DNA as an emerging tool in botanical research. Am. J. Bot. 110, e16120   \n61. Sun, W. et al. (2024) Plant species with extremely small populations conservation program: achieving Kunming– Montreal global biodiversity targets. Trends Plant Sci. 29, 827–830   \n62. Pimm, S.L. (2021) What we need to know to prevent a mass extinction of plant species. Plants People Planet 3, 7–15   \n63. Corlett, R.T. (2023) Achieving zero extinction for land plants. Trends Plant Sci. 28, 913–923 ",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 7
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 8
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 8
+    },
+    {
+        "type": "text",
+        "text": "Trends in Ecology & Evolution ",
+        "text_level": 1,
+        "page_idx": 9
+    },
+    {
+        "type": "text",
+        "text": "64. Zurell, D. (2023) Predicting extinctions with species distribution models. Camb. Prisms Extinction 1, e8   \n65. Enquist, B.J. et al. (2019) The commonness of rarity: global and future distribution of rarity across land plants. Sci. Adv. 5, eaaz0414   \n66. Auffret, A.G. et al. (2024) Underprediction of extirpation and colonisation following climate and land-use change using species distribution models. Divers. Distrib. 30, e13834   \n67. Chevalier, M. et al. (2024) Climate change may reveal currently unavailable parts of species’ ecological niches. Nat. Ecol. Evol. 8, 1298–1310   \n68. Peng, S. et al. (2024) Incorporating plant phenological responses into species distribution models reduces estimates of future species loss and turnover. New Phytol. 242, 2338–2352   \n69. Svenning, J.-C. and Sandel, B. (2013) Disequilibrium vegetation dynamics under future climate change. Am. J. Bot. 100, 1266–1286   \n70. Fricke, E.C. et al. (2022) The effects of defaunation on plants’ capacity to track climate change. Science 375, 210–214   \n71. Haesen, S. et al. (2023) Microclimate reveals the true thermal niche of forest plant species. Ecol. Lett. 26, 2043–2055   \n72. Rose, M.B. et al. (2024) Uncertainty in consensus predictions of plant species' vulnerability to climate change. Divers. Distrib. 30, e1398   \n73. Naughtin, S.R. et al. (2024) Integrating genomic data and simulations to evaluate alternative species distribution models and improve predictions of glacial refugia and future responses to climate change. Ecography, Published online July 2, 2024 https:// doi.org/10.1111/ecog.07196 ",
+        "page_idx": 9
+    },
+    {
+        "type": "text",
+        "text": "",
+        "page_idx": 9
+    }
+]

@@ -143,23 +143,14 @@
     margin: 10px 0;
 }
 
-/* 针对方法学部分的特殊样式 */
-.markdown-report-container h2:contains("方法学分析"),
-.markdown-report-container h2[id^="方法学"],
-.markdown-report-container h2 strong:contains("方法") {
+/* 针对方法学部分的特殊样式 (已移除非标准 :contains() 伪类) */
+/* 假设方法学分析的标题ID是 '2-方法学分析' */
+.markdown-report-container #方法学分析 { /* 使用ID选择器 */
     color: #22c55e !important;
     border-left-color: #22c55e;
     background-color: rgba(34, 197, 94, 0.05);
     padding: 8px 5px;
     border-radius: 4px;
-}
-
-.markdown-report-container h3:contains("方法"),
-.markdown-report-container h3 strong:contains("方法"),
-.markdown-report-container h3[id*="方法"] {
-    color: #4ade80 !important;
-    padding-left: 5px;
-    border-left: 3px solid #4ade80;
 }
 
 /* 亮色模式适配 */
@@ -213,18 +204,9 @@
     }
     
     /* 亮色模式下方法学部分的特殊样式 */
-    .markdown-report-container h2:contains("方法学分析"),
-    .markdown-report-container h2[id^="方法学"],
-    .markdown-report-container h2 strong:contains("方法") {
+    .markdown-report-container #方法学分析 { /* 使用ID选择器 */
         color: #166534 !important;
         border-left-color: #166534;
         background-color: rgba(22, 101, 52, 0.05);
-    }
-    
-    .markdown-report-container h3:contains("方法"),
-    .markdown-report-container h3 strong:contains("方法"),
-    .markdown-report-container h3[id*="方法"] {
-        color: #15803d !important;
-        border-left-color: #15803d;
     }
 }

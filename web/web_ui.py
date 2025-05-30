@@ -9,17 +9,8 @@ from io import BytesIO
 
 from app import process_article_pipeline, save_report
 from slais import config
-from pathlib import Path
-
-def get_log_file_path():
-    # 获取最新的日志文件路径
-    log_dir = Path(config.settings.LOG_DIR)
-    if not log_dir.exists():
-        return None
-    log_files = sorted(log_dir.glob("slais_*.log"), reverse=True)
-    return log_files[0] if log_files else None
-from slais import config
-from web.models import load_models_from_config_file, get_model_choices
+# 从 slais.utils.logging_utils 导入 get_log_file_path
+from slais.utils.logging_utils import get_log_file_path, logger # 导入 logger
 
 # Add project root to sys.path
 project_root = Path(__file__).parent.parent.absolute()
@@ -45,82 +36,67 @@ def load_css_file(css_file_path):
 def run_slais_web_ui():
     st.set_page_config(page_title="SLAIS 文献智能分析", layout="wide")
     
-    # LOGO显示（优先本地SVG，回退到 slais_logo.svg），LOGO单独一行且无其他字符
-    logo_path = Path(__file__).parent.parent / "logo.svg"
-    if not logo_path.exists():
-        logo_path = Path(__file__).parent.parent / "slais_logo.svg"
+    # LOGO显示（使用 st.image，更稳定）
+    logo_path = project_root / "logo.svg"
     if logo_path.exists():
-        try:
-            with open(logo_path, "r", encoding="utf-8") as f:
-                svg_logo = f.read()
-            # 检查svg_logo是否为字符串且包含<svg
-            if not isinstance(svg_logo, str) or "<svg" not in svg_logo:
-                raise ValueError("logo文件内容不是有效的SVG字符串")
-            st.markdown(
-                f"""<div style="width:100%;text-align:center;margin-bottom:0.5em;">{svg_logo}</div>""",
-                unsafe_allow_html=True
-            )
-        except Exception as e:
-            st.markdown(
-                f"<div style='width:100%;text-align:center;margin-bottom:0.5em;color:red;'>LOGO加载失败: {e}</div>",
-                unsafe_allow_html=True
-            )
+        st.image(str(logo_path), width=120, use_container_width=False) # 替换 use_column_width 为 use_container_width
     else:
-        st.markdown(
-            "<div style='width:100%;text-align:center;margin-bottom:0.5em;'><b>SLAIS</b></div>",
-            unsafe_allow_html=True
-        )
+        logger.warning(f"Logo文件未找到: {logo_path.resolve()}")
+        st.markdown("<div style='width:100%;text-align:center;margin-bottom:0.5em;'><b>SLAIS</b></div>", unsafe_allow_html=True)
 
     st.title("SLAIS 文献智能分析系统")
     st.markdown("高效、结构化的PDF学术文献分析与报告生成工具。")
-
-    # 加载config.txt中的模型数据
-    config_file_path = Path(__file__).parent / "config.txt"
-    all_available_models = load_models_from_config_file(str(config_file_path))
 
     # 使用两列布局来优化空间利用
     col1, col2 = st.columns([3, 1])
     
     with col2:
         st.header("参数设置")
+        
         # API接口选择
-        api_choices = list(all_available_models.keys())
+        api_choices = list(config.settings.LLM_MODEL_CHOICES.keys())
         if not api_choices:
-            api_choices = ["OpenAI"] # 默认选项，以防config.txt为空或解析失败
-            st.warning("config.txt中未找到API接口配置，请检查文件。")
+            api_choices = ["OpenAI"] # 默认选项，以防配置为空
+            st.warning("LLM模型配置为空，请检查 slais/config.py 或 .env 文件。")
 
-        # 尝试根据图片中的“阿里云”设置默认索引
+        # 尝试根据配置中的默认API设置默认索引
+        default_api_name = config.settings.DEFAULT_TEXT_MODEL_FOR_API.get("OpenAI", "OpenAI") # 假设OpenAI是默认API
         try:
-            default_api_index = api_choices.index("阿里云")
+            default_api_index = api_choices.index(default_api_name)
         except ValueError:
-            default_api_index = 0 # 如果没有“阿里云”，则默认为第一个
+            default_api_index = 0 # 如果没有找到，则默认为第一个
 
         selected_api = st.selectbox("API接口", options=api_choices, index=default_api_index, help="选择用于模型调用的API接口。不同的API接口可能有不同的模型选择和性能表现。")
 
-        # 根据API接口选择对应的模型列表
-        # 默认模型名称，以防config.txt中没有对应API的模型
-        default_text_model_for_api = {
-            "OpenAI": config.settings.OPENAI_API_MODEL,
-            "Gemini": "gemini-pro",
-            "xAI": "grok-1",
-            "阿里云": "qwen-turbo", # 阿里云的默认模型
-            "DeepSeek": "deepseek-chat",
-            "OpenRouter": "openrouter-auto"
-        }
-        text_model_choices = get_model_choices(selected_api, all_available_models, default_text_model_for_api.get(selected_api, "default-model"))
-        text_model = st.selectbox("文本大模型", options=text_model_choices, index=0, help="选择用于文本分析的模型。不同的模型可能在处理速度和分析深度上有所不同。")
+        # 文本大模型选择
+        text_model_choices = config.settings.LLM_MODEL_CHOICES.get(selected_api, [])
+        if not text_model_choices:
+            text_model_choices = [config.settings.OPENAI_API_MODEL] # 回退到 .env 中的默认文本模型
+            st.warning(f"API接口 '{selected_api}' 未配置文本模型，使用默认值 '{config.settings.OPENAI_API_MODEL}'。")
+        
+        # 尝试设置默认选中的文本模型
+        default_text_model = config.settings.DEFAULT_TEXT_MODEL_FOR_API.get(selected_api, text_model_choices[0] if text_model_choices else "default-model")
+        try:
+            default_text_model_index = text_model_choices.index(default_text_model)
+        except ValueError:
+            default_text_model_index = 0 # 如果默认模型不在列表中，选择第一个
+        
+        text_model = st.selectbox("文本大模型", options=text_model_choices, index=default_text_model_index, help="选择用于文本分析的模型。不同的模型可能在处理速度和分析深度上有所不同。")
 
-        # 图像模型选择：与文本模型使用同一API接口下的模型
-        # 优先使用当前API接口下的模型作为图像模型选项
-        image_model_choices = get_model_choices(selected_api, all_available_models, default_text_model_for_api.get(selected_api, "default-image-model"))
-        # 如果当前API接口没有提供模型，或者没有明确的图像模型，可以考虑一个通用的图像模型
+        # 图像模型选择
+        image_model_choices = config.settings.LLM_MODEL_CHOICES.get(selected_api, [])
         if not image_model_choices:
-            # 备用方案：如果当前API没有模型，可以尝试从OpenAI获取，或者设置一个通用默认值
-            image_model_choices = get_model_choices("OpenAI", all_available_models, config.settings.IMAGE_LLM_API_MODEL)
-            if not image_model_choices:
-                image_model_choices = [config.settings.IMAGE_LLM_API_MODEL] # 最终回退到环境变量或硬编码默认值
-
-        image_model = st.selectbox("图像大模型", options=image_model_choices, index=0, help="选择用于图片内容分析的模型。确保选择支持图像处理的模型。")
+            image_model_choices = [config.settings.IMAGE_LLM_API_MODEL] # 回退到 .env 中的默认图像模型
+            st.warning(f"API接口 '{selected_api}' 未配置图像模型，使用默认值 '{config.settings.IMAGE_LLM_API_MODEL}'。")
+        
+        # 尝试设置默认选中的图像模型
+        default_image_model = config.settings.DEFAULT_IMAGE_MODEL_FOR_API.get(selected_api, image_model_choices[0] if image_model_choices else "default-image-model")
+        try:
+            default_image_model_index = image_model_choices.index(default_image_model)
+        except ValueError:
+            default_image_model_index = 0 # 如果默认模型不在列表中，选择第一个
+        
+        image_model = st.selectbox("图像大模型", options=image_model_choices, index=default_image_model_index, help="选择用于图片内容分析的模型。确保选择支持图像处理的模型。")
 
         article_doi = st.text_input("文章DOI", value=config.settings.ARTICLE_DOI or "", help="输入文章的数字对象标识符(DOI)，用于获取文章的元数据和相关文献。")
         ncbi_email = st.text_input("NCBI邮箱", value=config.settings.NCBI_EMAIL or "", help="输入您的NCBI邮箱，用于访问PubMed数据库获取相关文献信息。")

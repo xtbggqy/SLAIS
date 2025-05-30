@@ -151,22 +151,17 @@ def display_results():
                 with open(md_files[0], "r", encoding="utf-8") as f:
                     md_content_raw = f.read()
                 
-                # 直接删除报告中的参考文献和相关文献部分
-                # 匹配以"## 7. 参考文献信息"开始的部分，直到下一个##标题或文件末尾
-                pattern_references = r"^(## 7\\. 参考文献信息)[\\s\\S]*?(?=\\n^##|\\Z)"
-                md_content_processed = re.sub(pattern_references, "", md_content_raw, flags=re.MULTILINE)
-                
-                # 匹配以"## 8. 相关文献信息"开始的部分，直到下一个##标题或文件末尾
-                pattern_related_literature = r"^(## 8\\. 相关文献信息)[\\s\\S]*?(?=\\n^##|\\Z)"
-                md_content_cleaned_for_preview = re.sub(pattern_related_literature, "", md_content_processed, flags=re.MULTILINE)
-
-                # 移除可能包含的logo.svg相关内容 (仅针对预览)
-                md_content_cleaned_for_preview = md_content_cleaned_for_preview.replace("![logo](logo.svg)", "").replace("<img src=\"logo.svg\" alt=\"logo\">", "")
-                
-                # 用于下载的完整内容 (保留参考文献和相关文献部分，只移除logo)
-                md_content_for_download = md_content_raw.replace("![logo](logo.svg)", "").replace("<img src=\"logo.svg\" alt=\"logo\">", "")
+                # md_content_raw 本身已不包含 logo HTML，可直接用于下载
+                md_content_for_download = md_content_raw
                 
                 st.markdown("---")
+                # 在报告预览前显示 Logo
+                logo_path = Path("logo.svg") # 假设 logo.svg 在项目根目录
+                if logo_path.exists():
+                    st.image(str(logo_path), width=120)
+                else:
+                    logger.warning(f"Logo文件未找到: {logo_path.resolve()}")
+                
                 st.subheader("分析报告预览")
                 st.markdown("以下是生成的分析报告，您可以选择不同的渲染方式查看内容。")
                 
@@ -174,7 +169,7 @@ def display_results():
                 
                 with tab1:
                     try:
-                        html_content = markdown.markdown(md_content_cleaned_for_preview, extensions=['extra', 'toc'])
+                        html_content = markdown.markdown(md_content_raw, extensions=['extra', 'toc'])
                         
                         # 加载外部CSS文件
                         css_path = Path(__file__).parent / "markdown_styles.css"
@@ -190,7 +185,7 @@ def display_results():
                                 overflow-x: auto;
                                 max-height: 600px;
                             }
-                            """
+                        """
                         
                         # 添加JavaScript来处理目录跳转
                         js_code = """
@@ -212,29 +207,22 @@ def display_results():
                         """
                         
                         # 应用CSS样式并渲染HTML内容
-                        st.markdown(
-                            f"""
-                            <style>
-                            {css_content}
-                            </style>
-                            <div class="markdown-report-container">
-                            {html_content}
-                            {js_code}
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+                        # 分步应用，以便更好地隔离问题
+                        st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='markdown-report-container'>{html_content}</div>", unsafe_allow_html=True)
+                        st.markdown(js_code, unsafe_allow_html=True)
+
                     except ImportError as e:
                         logger.error(f"无法以HTML格式渲染报告，因为缺少 'markdown' 模块: {e}")
                         st.warning("无法以HTML格式渲染报告，因为缺少 'markdown' 模块。请安装它：pip install markdown")
-                        st.markdown(md_content_cleaned_for_preview, unsafe_allow_html=True)
+                        st.markdown(md_content_raw, unsafe_allow_html=True)
                     except Exception as e:
                         logger.error(f"HTML渲染过程中发生错误: {e}")
                         st.warning(f"HTML渲染过程中发生错误: {e}")
-                        st.markdown(md_content_cleaned_for_preview, unsafe_allow_html=True)
+                        st.markdown(md_content_raw, unsafe_allow_html=True)
                 
                 with tab2:
-                    st.code(md_content_cleaned_for_preview, language="markdown")
+                    st.code(md_content_raw, language="markdown")
                 
                 # 提供导出选项
                 st.markdown("---")
@@ -242,11 +230,12 @@ def display_results():
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     # 下载按钮使用处理后的内容版本，不包含参考文献和相关文献
-                    st.download_button("下载Markdown报告", md_content_cleaned_for_preview, file_name=md_files[0].name, help="下载分析报告Markdown格式文件，不包含参考文献和相关文献。")
+                    st.download_button("下载Markdown报告", md_content_for_download, file_name=md_files[0].name, help="下载分析报告Markdown格式文件，不包含参考文献和相关文献。")
                 with col2:
                     try:
                         # PDF生成使用隐藏参考文献和相关文献的版本
-                        html_content_for_pdf = markdown.markdown(md_content_cleaned_for_preview, extensions=['extra', 'toc', 'tables', 'fenced_code'])
+                        # 暂时移除 'toc' 扩展以诊断 PDF 生成错误
+                        html_content_for_pdf = markdown.markdown(md_content_raw, extensions=['extra', 'tables', 'fenced_code'])
                         
                         pdf_buffer = BytesIO()
                         pdf_doc = SimpleDocTemplate(pdf_buffer, pagesize=(8.5 * inch, 11 * inch),

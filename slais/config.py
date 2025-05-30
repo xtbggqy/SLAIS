@@ -118,6 +118,69 @@ class Settings(BaseSettings):
     MAX_QUESTIONS_TO_GENERATE: int = Field(int(os.getenv("MAX_QUESTIONS_TO_GENERATE", 30)), ge=1, description="Maximum number of Q&A pairs to generate")
     MAX_CONTENT_CHARS_FOR_LLM: int = Field(15000, ge=1000, description="Maximum content characters to pass to LLM for analysis tasks")
 
+    # LLM 模型选择配置 (从 web/config.txt 迁移过来，并更新为最新模型)
+    LLM_MODEL_CHOICES: Dict[str, List[str]] = Field(
+        {
+            "OpenAI": [
+                "gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+                "gpt-4.5-preview", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
+                "o3", "o4-mini", "dall-e-3" # DALL-E 3 是图像生成模型
+            ],
+            "阿里云": [
+                "qwen-turbo", "qwen-plus", "qwen-max", "qwen3", "qwen2.5-omni",
+                "qwen2.5-vl", "qwen-vl-plus", "qwen-vl-max", "qwen-72b-chat",
+                "qwen-14b-chat", "qwen-7b-chat", "qwen-max-longcontext",
+                "qwen-2-72b-instruct", "qwen2.5-72b", "qwen2.5-max", "qwen2.5-turbo"
+            ],
+            "Gemini": [
+                "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro-latest",
+                "gemini-1.5-flash-latest", "gemini-1.5-pro-002", "gemini-1.5-flash-002",
+                "gemini-pro", "gemini-pro-vision", "gemini-1.0-pro"
+            ],
+            "xAI": [
+                "grok-3", "grok-3-mini", "grok-2", "grok-2-mini", "grok-2-vision-1212",
+                "grok-1.5", "grok-1"
+            ],
+            "DeepSeek": [
+                "deepseek-r1-0528", "deepseek-v3-0324", "deepseek-chat", "deepseek-r1",
+                "deepseek-r1:latest", "deepseek-r1:8b", "deepseek-r1:7b", "deepseek-r1:1.5b"
+            ],
+            "OpenRouter": [
+                "openrouter-auto", "anthropic/claude-3-opus-20240229",
+                "anthropic/claude-3-sonnet-20240229", "anthropic/claude-3-haiku-20240307",
+                "anthropic/claude-3.5-sonnet-20240620", "meta-llama/llama-3.1-70b-instruct",
+                "meta-llama/llama-3.1-8b-instruct", "mistralai/mistral-large-2402",
+                "mistralai/mistral-7b-instruct-v0.2", "cohere/command-r-plus-04-2024",
+                "xai/grok-2-latest", "deepseek-coder-v2.5"
+            ]
+        },
+        description="Available LLM models grouped by API interface"
+    )
+    
+    # 从 .env 中获取默认文本模型信息
+    DEFAULT_TEXT_MODEL_FOR_API: Dict[str, str] = Field(
+        {
+            "OpenAI": os.getenv("DEFAULT_OPENAI_TEXT_MODEL", "gpt-4o"),
+            "Gemini": os.getenv("DEFAULT_GEMINI_TEXT_MODEL", "gemini-1.5-pro-latest"),
+            "xAI": os.getenv("DEFAULT_XAI_TEXT_MODEL", "grok-3"),
+            "阿里云": os.getenv("DEFAULT_ALIYUN_TEXT_MODEL", "qwen-turbo"),
+            "DeepSeek": os.getenv("DEFAULT_DEEPSEEK_TEXT_MODEL", "deepseek-chat"),
+            "OpenRouter": os.getenv("DEFAULT_OPENROUTER_TEXT_MODEL", "openrouter-auto")
+        },
+        description="Default text model for each API interface, configurable via .env"
+    )
+    
+    # 从 .env 中获取默认图像模型信息
+    DEFAULT_IMAGE_MODEL_FOR_API: Dict[str, str] = Field(
+        {
+            "OpenAI": os.getenv("DEFAULT_OPENAI_IMAGE_MODEL", "gpt-4o"),
+            "阿里云": os.getenv("DEFAULT_ALIYUN_IMAGE_MODEL", "qwen-vl-plus"),
+            "Gemini": os.getenv("DEFAULT_GEMINI_IMAGE_MODEL", "gemini-pro-vision"),
+            "xAI": os.getenv("DEFAULT_XAI_IMAGE_MODEL", "grok-2-vision-1212")
+        },
+        description="Default image model for each API interface, configurable via .env"
+    )
+
     # markdown子目录名，可在.env中配置，未配置时自动为 <pdf_stem>_markdown
     MARKDOWN_SUBDIR: str = ""
 

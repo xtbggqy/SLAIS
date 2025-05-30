@@ -18,7 +18,7 @@ def initialize_app_dependencies():
     global config, logger, setup_logging
     global ChatOpenAI, PromptTemplate
     global PDFParsingAgent, MetadataFetchingAgent
-    global MethodologyAnalysisAgent, InnovationExtractionAgent, QAGenerationAgent
+    global MethodologyAnalysisAgent, InnovationExtractionAgent, QAGenerationAgent, DeepAnalysisAgent
     global StorytellingAgent, MindMapAgent, TokenUsageCallbackHandler
     global generate_enhanced_report, ImageAnalysisAgent
     
@@ -36,7 +36,8 @@ def initialize_app_dependencies():
         InnovationExtractionAgent,
         QAGenerationAgent,
         StorytellingAgent,
-        MindMapAgent
+        MindMapAgent,
+        DeepAnalysisAgent # 导入 DeepAnalysisAgent
     )
     from agents.callbacks import TokenUsageCallbackHandler
     from agents.formatting_utils import generate_enhanced_report
@@ -82,7 +83,8 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         InnovationExtractionAgent,
         QAGenerationAgent,
         StorytellingAgent,
-        MindMapAgent
+        MindMapAgent,
+        DeepAnalysisAgent # 在此处添加 DeepAnalysisAgent 的导入
     )
     from agents.image_analysis_agent import ImageAnalysisAgent
     
@@ -153,6 +155,7 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     qa_generator = QAGenerationAgent(llm)
     storytelling_agent = StorytellingAgent(llm)
     mindmap_agent = MindMapAgent(llm)
+    deep_analyzer = DeepAnalysisAgent(llm) # 实例化 DeepAnalysisAgent
     image_agent = ImageAnalysisAgent(image_llm)  # 用图片 LLM 初始化
 
     # 3. 执行流程
@@ -282,10 +285,10 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     s2_info = analysis_results["metadata"].get("s2_info")
     pubmed_info = analysis_results["metadata"].get("pubmed_info")
 
-    # 3.3-3.9 LLM分析并发执行
-    update_progress(60, "步骤 4/6：LLM分析中...")
+    # 3.3-3.9 LLM分析并发执行 (现在是步骤 4/7)
+    update_progress(60, "步骤 4/7：LLM初步分析中...")
     start_time_llm_analysis = datetime.datetime.now()
-    current_stage_name_llm = "LLM综合分析"
+    current_stage_name_llm = "LLM初步分析" # 更新阶段名称
     tasks = {
         "methodology_analysis": methodology_analyzer.analyze_methodology(
             full_content, callbacks=callbacks_list),
@@ -308,16 +311,16 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
             else:
                 analysis_results[key] = value
         record_stage(current_stage_name_llm, start_time_llm_analysis, datetime.datetime.now())
-        update_progress(70, "步骤 4/6：LLM分析完成。")
+        update_progress(70, "步骤 4/7：LLM初步分析完成。")
     except Exception as e:
-        logger.error(f"LLM综合分析阶段出错: {e}")
+        logger.error(f"LLM初步分析阶段出错: {e}")
         stage_status[current_stage_name_llm] = "失败"
         record_stage(current_stage_name_llm, start_time_llm_analysis, datetime.datetime.now())
-        update_progress(70, "步骤 4/6：LLM分析失败。")
+        update_progress(70, "步骤 4/7：LLM初步分析失败。")
 
 
-    # 3.5 问答生成 - 再为每个问题生成答案（单独并发）
-    update_progress(75, "步骤 5/6：为每个问题生成答案...")
+    # 3.5 问答生成 - 再为每个问题生成答案（单独并发） (现在是步骤 5/7)
+    update_progress(75, "步骤 5/7：为每个问题生成答案...")
     start_time_qa_answers = datetime.datetime.now()
     current_stage_name_qa_answers = "问答对生成"
     questions = analysis_results.get("questions") or []
@@ -342,12 +345,12 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         record_stage(current_stage_name_qa_answers, start_time_qa_answers, datetime.datetime.now())
     update_progress(80, "步骤 5/6：问答生成完成。")
 
-    # 3.6 (可选) 获取参考文献和相关文章
+    # 3.6 (可选) 获取参考文献和相关文章 (现在是步骤 6/7)
     s2_paper_id = s2_info.get("paperId") if s2_info else None
     pubmed_pmid = pubmed_info.get("pmid") if pubmed_info else None
 
     # 获取参考文献
-    update_progress(85, "步骤 6/6：获取参考文献...")
+    update_progress(82, "步骤 6/7：获取参考文献...") # 调整进度百分比
     start_time_references = datetime.datetime.now()
     current_stage_name_references = "参考文献获取"
     references_data = {
@@ -361,25 +364,25 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
             references_data = await metadata_fetcher.fetch_references(s2_paper_id, ncbi_email)
             analysis_results["references_data"] = references_data
             record_stage(current_stage_name_references, start_time_references, datetime.datetime.now())
-            update_progress(90, f"步骤 6/6：获取了 {len(references_data.get('full_references_details', []))} 条参考文献。")
+            update_progress(85, f"步骤 6/7：获取了 {len(references_data.get('full_references_details', []))} 条参考文献。") # 调整进度
         except Exception as e:
             logger.error(f"获取参考文献失败: {e}")
             references_data["error"] = str(e)
             analysis_results["references_data"] = references_data
             stage_status[current_stage_name_references] = "失败"
             record_stage(current_stage_name_references, start_time_references, datetime.datetime.now())
-            update_progress(90, "步骤 6/6：获取参考文献失败。")
+            update_progress(85, "步骤 6/7：获取参考文献失败。") # 调整进度
     else:
         logger.warning("跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效。")
         references_data["error"] = "主要文章的 Semantic Scholar paperId 未找到或无效。"
         analysis_results["references_data"] = references_data
         stage_status[current_stage_name_references] = "跳过 (无S2PaperID)"
         record_stage(current_stage_name_references, start_time_references, datetime.datetime.now())
-        update_progress(90, "步骤 6/6：跳过获取参考文献。")
+        update_progress(85, "步骤 6/7：跳过获取参考文献。") # 调整进度
 
 
     # 获取相关文章
-    update_progress(95, "步骤 6/6：获取相关文章...")
+    update_progress(87, "步骤 6/7：获取相关文章...") # 调整进度
     start_time_related_articles = datetime.datetime.now()
     current_stage_name_related = "相关文章获取"
     related_articles_pubmed = []
@@ -388,19 +391,71 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
             related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_pmid, ncbi_email)
             analysis_results["related_articles_pubmed"] = related_articles_pubmed
             record_stage(current_stage_name_related, start_time_related_articles, datetime.datetime.now())
-            update_progress(98, f"步骤 6/6：获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
+            update_progress(90, f"步骤 6/7：获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。") # 调整进度
         except Exception as e:
             logger.error(f"获取相关文章失败: {e}")
             analysis_results["related_articles_pubmed"] = []
             stage_status[current_stage_name_related] = "失败"
             record_stage(current_stage_name_related, start_time_related_articles, datetime.datetime.now())
-            update_progress(98, "步骤 6/6：获取相关文章失败。")
+            update_progress(90, "步骤 6/7：获取相关文章失败。") # 调整进度
     else:
         logger.warning("跳过获取相关文章，因为主要文章的 PubMed PMID 未找到或无效。")
         analysis_results["related_articles_pubmed"] = []
         stage_status[current_stage_name_related] = "跳过 (无PMID)"
         record_stage(current_stage_name_related, start_time_related_articles, datetime.datetime.now())
-        update_progress(98, "步骤 6/6：跳过获取相关文章。")
+        update_progress(90, "步骤 6/7：跳过获取相关文章。") # 调整进度
+
+    # 3.7 新增：深度文献分析 (现在是步骤 7/7)
+    update_progress(92, "步骤 7/7：执行深度文献分析...")
+    start_time_deep_analysis = datetime.datetime.now()
+    current_stage_name_deep_analysis = "深度文献分析"
+    
+    # 准备参考文献和相关文献的摘要信息
+    references_summary_str = "无参考文献信息。"
+    if analysis_results.get("references_data", {}).get("full_references_details"):
+        refs_list = []
+        for idx, ref in enumerate(analysis_results["references_data"]["full_references_details"][:10]): # 最多取前10条以控制长度
+            title = ref.get('title', 'N/A')
+            authors = ref.get('authors_str', 'N/A') # 使用原始的 authors_str
+            year = ref.get('pub_date', 'N/A').split('-')[0] if ref.get('pub_date') else 'N/A'
+            journal = ref.get('journal', 'N/A')
+            doi = ref.get('doi', '')
+            pmid_ref = ref.get('pmid', '')
+            identifier = f"DOI: {doi}" if doi else (f"PMID: {pmid_ref}" if pmid_ref else "")
+            refs_list.append(f"[{idx+1}] {authors} ({year}). {title}. {journal}. {identifier}".strip())
+        references_summary_str = "\n".join(refs_list) if refs_list else "无有效参考文献摘要信息。"
+
+    related_articles_summary_str = "无相关文献信息。"
+    if analysis_results.get("related_articles_pubmed"):
+        related_list = []
+        for rel_art in analysis_results["related_articles_pubmed"][:5]: # 最多取前5条
+            title = rel_art.get('title', 'N/A')
+            authors = rel_art.get('authors_str', 'N/A') # 使用原始的 authors_str
+            year = rel_art.get('pub_date', 'N/A').split('-')[0] if rel_art.get('pub_date') else 'N/A'
+            journal = rel_art.get('journal', 'N/A')
+            doi = rel_art.get('doi', '')
+            pmid_rel = rel_art.get('pmid', '')
+            identifier = f"DOI: {doi}" if doi else (f"PMID: {pmid_rel}" if pmid_rel else "")
+            related_list.append(f"- {authors} ({year}). {title}. {journal}. {identifier}".strip())
+        related_articles_summary_str = "\n".join(related_list) if related_list else "无有效相关文献摘要信息。"
+        
+    try:
+        deep_analysis_result = await deep_analyzer.analyze_deeply(
+            content=full_content, # 使用包含图片分析的 full_content
+            image_analysis="", # image_analysis 已包含在 full_content 中，此处可传空或不传，取决于Agent设计
+            references_summary=references_summary_str,
+            related_articles_summary=related_articles_summary_str,
+            callbacks=callbacks_list
+        )
+        analysis_results["deep_analysis"] = deep_analysis_result
+        record_stage(current_stage_name_deep_analysis, start_time_deep_analysis, datetime.datetime.now())
+        update_progress(98, "步骤 7/7：深度文献分析完成。")
+    except Exception as e:
+        logger.error(f"深度文献分析失败: {e}")
+        analysis_results["deep_analysis"] = f"错误：深度文献分析失败 ({e})"
+        stage_status[current_stage_name_deep_analysis] = "失败"
+        record_stage(current_stage_name_deep_analysis, start_time_deep_analysis, datetime.datetime.now())
+        update_progress(98, "步骤 7/7：深度文献分析失败。")
 
     update_progress(100, "所有处理步骤完成。")
     token_callback_handler.log_total_usage()
