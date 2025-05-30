@@ -294,7 +294,7 @@
                                         217
                                     ],
                                     "score": 0.55,
-                                    "content": "{ > } 1 0 0",
+                                    "content": "{ \\tt > } 1 0 0",
                                     "type": "inline_equation",
                                     "height": 9,
                                     "width": 21
@@ -5016,7 +5016,7 @@
                                         217
                                     ],
                                     "score": 0.55,
-                                    "content": "{ > } 1 0 0",
+                                    "content": "{ \\tt > } 1 0 0",
                                     "type": "inline_equation",
                                     "height": 9,
                                     "width": 21

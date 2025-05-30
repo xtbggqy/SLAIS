@@ -300,27 +300,36 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     update_progress(80, "步骤 5/6：问答生成完成。")
 
     # 3.6 (可选) 获取参考文献和相关文章
-    if s2_info and s2_info.get("paperId"):
-        update_progress(85, "步骤 6/6：获取参考文献...")
-        references_data = await metadata_fetcher.fetch_references(s2_info["paperId"], ncbi_email)
-        analysis_results["references_data"] = references_data
-        update_progress(90, f"步骤 6/6：获取了 {len(references_data.get('reference_dois', []))} 条参考文献的DOI。")
-    else:
-        update_progress(90, f"步骤 6/6：跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效。")
-        analysis_results["references_data"] = {
-            "source_paper_id": s2_info.get("paperId") if s2_info else "N/A",
-            "reference_dois": [],
-            "full_references_details": [],
-            "error": "Skipped fetching references due to missing or invalid S2 paperId for the main article."
-        }
+    # 优先使用S2 paperId获取参考文献
+    s2_paper_id = s2_info.get("paperId") if s2_info else None
+    pubmed_pmid = pubmed_info.get("pmid") if pubmed_info else None
 
-    if pubmed_info and pubmed_info.get("pmid"):
-        update_progress(95, "步骤 6/6：获取相关文章 (PubMed)...")
-        related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_info["pmid"], ncbi_email)
+    # 获取参考文献
+    references_data = {
+        "source_paper_id": "N/A",
+        "reference_dois": [],
+        "full_references_details": [],
+        "error": "未尝试获取参考文献。"
+    }
+    if s2_paper_id:
+        update_progress(85, "步骤 6/6：获取参考文献 (通过Semantic Scholar)...")
+        references_data = await metadata_fetcher.fetch_references(s2_paper_id, ncbi_email)
+        analysis_results["references_data"] = references_data
+        update_progress(90, f"步骤 6/6：获取了 {len(references_data.get('full_references_details', []))} 条参考文献。")
+    else:
+        logger.warning("跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效。")
+        analysis_results["references_data"] = references_data # 保持默认的错误信息
+
+    # 获取相关文章
+    related_articles_pubmed = []
+    if pubmed_pmid:
+        update_progress(95, "步骤 6/6：获取相关文章 (通过PubMed)...")
+        related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_pmid, ncbi_email)
         analysis_results["related_articles_pubmed"] = related_articles_pubmed
         update_progress(98, f"步骤 6/6：获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
     else:
-        update_progress(98, "步骤 6/6：未检测到可获取的相关文章。")
+        logger.warning("跳过获取相关文章，因为主要文章的 PubMed PMID 未找到或无效。")
+        analysis_results["related_articles_pubmed"] = []
 
     update_progress(100, "所有处理步骤完成。")
     token_callback_handler.log_total_usage()

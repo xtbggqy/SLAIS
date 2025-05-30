@@ -2,22 +2,38 @@ from typing import List, Optional, Dict, Any
 from slais.pubmed_client import PubMedClient, ArticleDetails
 from slais.semantic_scholar_client import SemanticScholarClient
 from slais.utils.logging_utils import logger
-from slais import config # 添加此行导入
+from slais import config
+from agents.cache.database_manager import DatabaseManager
 
 class MetadataFetchingAgent:
     def __init__(self):
         self.pubmed_client = PubMedClient()
         self.s2_client = SemanticScholarClient()
+        self.db_manager = DatabaseManager()
 
     async def fetch_metadata(self, doi: str, email: str) -> Dict[str, Any]:
         """
-        获取文章的元数据，包括PubMed和Semantic Scholar信息。
+        获取文章的元数据，包括PubMed和Semantic Scholar信息。优先从数据库中获取，如果数据库中没有则从API获取并存储到数据库。
+        如果缓存的元数据不完整（缺少关键ID），则尝试重新获取。
         """
+        cached_metadata = self.db_manager.get_metadata(doi)
+        if cached_metadata is not None:
+            # 检查缓存的元数据是否完整
+            has_pmid = bool(cached_metadata.get("pmid"))
+            has_s2_paper_id = bool(cached_metadata.get("s2_paper_id"))
+            # 如果关键ID都存在，则认为缓存是完整的
+            if has_pmid and has_s2_paper_id:
+                logger.info(f"使用来自数据库的DOI {doi} 的完整元数据缓存。")
+                return cached_metadata
+            else:
+                logger.info(f"DOI {doi} 的缓存元数据不完整 (PMID: {has_pmid}, S2PaperID: {has_s2_paper_id})。尝试重新获取。")
+        
+        # 如果缓存不存在或不完整，则从API获取
         metadata = {"pubmed_info": None, "s2_info": None}
 
         # 从PubMed获取信息
         try:
-            metadata["pubmed_info"] = await self.pubmed_client.get_article_details(doi, email)  # 修正方法名
+            metadata["pubmed_info"] = await self.pubmed_client.get_article_details(doi, email)
         except Exception as e:
             logger.error(f"[MetadataFetchingAgent] 从PubMed获取元数据时出错: {e}")
 
@@ -31,28 +47,24 @@ class MetadataFetchingAgent:
 
         if original_s2_info and original_s2_info.get('paperId'):
             logger.info(f"成功从S2获取原始文章信息 (S2 PaperID: {original_s2_info['paperId']})")
-            # s2_paper_id_original = original_s2_info['paperId'] # Not used further in this method
-
             s2_external_ids = original_s2_info.get('externalIds', {})
             pmid_from_s2 = s2_external_ids.get('PubMed') if isinstance(s2_external_ids, dict) else None
 
             if pmid_from_s2:
                 logger.info(f"S2提供了PMID: {pmid_from_s2}。正在从PubMed获取/核实...")
-                # 如果从S2获得了PMID，直接使用PMID获取PubMed详情
                 pubmed_info_s2_pmid = await self.pubmed_client.get_article_details_by_pmid(pmid_from_s2, email)
                 if pubmed_info_s2_pmid:
                     metadata["pubmed_info"] = pubmed_info_s2_pmid
                 else:
                     logger.warning(f"未能从PubMed获取PMID {pmid_from_s2} 的信息，将主要依赖S2数据。")
             else:
-                # S2没有提供PMID，尝试使用原始DOI从PubMed获取
                 logger.info("S2未提供PMID。尝试使用原始DOI从PubMed获取信息...")
                 pubmed_info_direct_doi = await self.pubmed_client.get_article_details(doi, email)
                 if pubmed_info_direct_doi:
                     metadata["pubmed_info"] = pubmed_info_direct_doi
                 else:
                     logger.warning(f"也未能通过原始DOI {doi} 从PubMed获取信息。")
-        else: # S2未能获取信息
+        else:
             logger.warning(f"未能从S2获取原始文章信息。尝试直接从PubMed获取 (使用原始DOI: {doi})...")
             pubmed_info_direct_doi = await self.pubmed_client.get_article_details(doi, email)
             if pubmed_info_direct_doi:
@@ -62,36 +74,112 @@ class MetadataFetchingAgent:
 
         metadata["s2_info"] = original_s2_info
         logger.info("元数据获取完成。")
+        
+        # 准备要存储到数据库的扁平化元数据
+        flat_metadata = {
+            "doi": doi,
+            "title": "",
+            "authors_str": "",
+            "pub_date": "",
+            "journal": "",
+            "abstract": "",
+            "pmid": "",
+            "pmid_link": "",
+            "pmcid": "",
+            "pmcid_link": "",
+            "citation_count": 0,
+            "s2_paper_id": ""
+        }
+
+        if metadata["pubmed_info"]:
+            pubmed_data = metadata["pubmed_info"]
+            flat_metadata["title"] = pubmed_data.get("title", "")
+            flat_metadata["authors_str"] = pubmed_data.get("authors_str", "")
+            flat_metadata["pub_date"] = pubmed_data.get("pub_date", "")
+            flat_metadata["journal"] = pubmed_data.get("journal", "")
+            flat_metadata["abstract"] = pubmed_data.get("abstract", "")
+            flat_metadata["pmid"] = pubmed_data.get("pmid", "")
+            flat_metadata["pmid_link"] = pubmed_data.get("pmid_link", "")
+            flat_metadata["pmcid"] = pubmed_data.get("pmcid", "")
+            flat_metadata["pmcid_link"] = pubmed_data.get("pmcid_link", "")
+
+        if metadata["s2_info"]:
+            s2_data = metadata["s2_info"]
+            # S2信息可能更全面，优先使用S2的标题、作者、摘要等
+            flat_metadata["title"] = s2_data.get("title", flat_metadata["title"])
+            flat_metadata["authors_str"] = "; ".join([a.get("name", "") for a in s2_data.get("authors", [])]) or flat_metadata["authors_str"]
+            flat_metadata["pub_date"] = s2_data.get("publicationDate", "") or flat_metadata["pub_date"]
+            flat_metadata["journal"] = s2_data.get("journal", {}).get("name", "") or flat_metadata["journal"]
+            flat_metadata["abstract"] = s2_data.get("abstract", "") or flat_metadata["abstract"]
+            flat_metadata["citation_count"] = s2_data.get("citationCount", 0)
+            flat_metadata["s2_paper_id"] = s2_data.get("paperId", "")
+            
+            # 确保PMID和DOI从S2外部ID中提取，如果PubMed信息中没有
+            s2_external_ids = s2_data.get('externalIds', {})
+            if not flat_metadata["pmid"] and s2_external_ids.get('PubMed'):
+                flat_metadata["pmid"] = s2_external_ids.get('PubMed')
+            if not flat_metadata["doi"] and s2_external_ids.get('DOI'):
+                flat_metadata["doi"] = s2_external_ids.get('DOI')
+
+        # 将获取到的元数据存储到数据库中
+        self.db_manager.set_metadata(doi, flat_metadata)
+        
         return metadata
         
     async def fetch_related_articles(self, pmid: str, email: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        获取与给定PMID相关的文献列表 (来自PubMed)。
+        获取与给定PMID相关的文献列表 (来自PubMed)。优先从数据库中获取，如果数据库中没有则从API获取并存储到数据库。
         """
-        logger.info(f"正在从PubMed获取PMID:{pmid}的相关文章...")
+        if not pmid:
+            logger.warning("PMID无效或缺失，无法获取相关文章。")
+            return []
+
+        # DatabaseManager.get_related_articles(pmid) 在未找到记录时返回 []
+        cached_articles = self.db_manager.get_related_articles(pmid)
+        # 如果 cached_articles 非空, 说明缓存命中且有数据
+        if cached_articles: 
+            logger.info(f"使用数据库中PMID {pmid} 的相关文章缓存。")
+            return cached_articles
+        
+        # 如果 cached_articles 为空 [], 说明数据库中未找到记录 (根据DatabaseManager的行为)
+        # 因此，从API获取。
+        logger.info(f"数据库中未找到PMID {pmid} 的相关文章缓存，正在从PubMed获取...")
         related_articles: List[ArticleDetails] = []
         try:
             related_articles = await self.pubmed_client.get_related_articles(pmid, email)
             logger.info(f"成功获取 {len(related_articles)} 篇PubMed相关文章")
+            # 将获取到的相关文章存储到数据库中
+            self.db_manager.set_related_articles(pmid, related_articles)
         except Exception as e:
             logger.error(f"获取PubMed相关文章时出错: {e}")
         return related_articles
     
     async def fetch_references(self, paper_id: str, email: Optional[str] = None) -> Dict[str, Any]:
         """
-        获取给定S2 Paper ID的参考文献详细信息。
+        获取给定S2 Paper ID的参考文献详细信息。优先从数据库中获取，如果数据库中没有则从API获取并存储到数据库。
         利用SemanticScholarClient的batch_get_references_by_papers方法。
         """
-        logger.info(f"正在从Semantic Scholar获取论文ID:{paper_id}的参考文献...")
+        if not paper_id:
+            logger.warning("S2 Paper ID无效或缺失，无法获取参考文献。")
+            return {"source_paper_id": paper_id, "reference_dois": [], "full_references_details": []}
+
+        # DatabaseManager.get_references(paper_id) 在未找到记录时返回 {'full_references_details': []}
+        cached_references_dict = self.db_manager.get_references(paper_id)
+        
+        # 如果 cached_references_dict['full_references_details'] 非空, 说明缓存命中且有数据
+        if cached_references_dict['full_references_details']:
+            logger.info(f"使用数据库中S2 Paper ID {paper_id} 的参考文献缓存。")
+            return cached_references_dict
+
+        # 如果 cached_references_dict['full_references_details'] 为空 [], 说明数据库中未找到记录 (根据DatabaseManager的行为)
+        # 因此，从API获取。
+        logger.info(f"数据库中未找到S2 Paper ID {paper_id} 的参考文献缓存，正在从Semantic Scholar获取...")
         references_data: Dict[str, Any] = {
             "source_paper_id": paper_id,
             "reference_dois": [],
             "full_references_details": []
         }
-        
-        if not paper_id:
-            logger.warning("未提供Paper ID，无法获取参考文献。")
-            return references_data
+        # paper_id 已在上层检查过，此处无需重复检查 `if not paper_id:`
 
         try:
             # 获取参考文献详情
@@ -309,4 +397,7 @@ class MetadataFetchingAgent:
             # 确保即使出错也保持结构一致
             references_data["error"] = str(e)
 
+        # 将获取到的参考文献信息存储到数据库中
+        self.db_manager.set_references(paper_id, references_data)
+        
         return references_data

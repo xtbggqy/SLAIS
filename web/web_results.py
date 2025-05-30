@@ -241,8 +241,8 @@ def display_results():
                 st.subheader("导出报告")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    # 下载按钮使用完整内容版本
-                    st.download_button("下载Markdown报告", md_content_for_download, file_name=md_files[0].name, help="下载完整的分析报告Markdown格式文件。")
+                    # 下载按钮使用处理后的内容版本，不包含参考文献和相关文献
+                    st.download_button("下载Markdown报告", md_content_cleaned_for_preview, file_name=md_files[0].name, help="下载分析报告Markdown格式文件，不包含参考文献和相关文献。")
                 with col2:
                     try:
                         # PDF生成使用隐藏参考文献和相关文献的版本
