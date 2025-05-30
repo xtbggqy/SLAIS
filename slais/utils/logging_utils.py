@@ -8,6 +8,9 @@ import errno
 # 从 ..config 导入配置变量
 from ..config import LOG_LEVEL, LOG_DIR, LOG_FILE
 
+# 检查是否是帮助模式
+is_help_mode = '--help' in sys.argv or '-h' in sys.argv
+
 # 在此处定义 ensure_directories 函数
 def ensure_directories(paths: list):
     """
@@ -17,10 +20,12 @@ def ensure_directories(paths: list):
         if path:  # 确保路径不是空的或None
             try:
                 os.makedirs(path, exist_ok=True)
-                print(f"INFO: 已确保目录存在: {path}")
+                if not is_help_mode:
+                    print(f"INFO: 已确保目录存在: {path}")
             except OSError as e:
                 if e.errno != errno.EEXIST: # 忽略目录已存在的错误
-                    print(f"ERROR: 创建目录 {path} 时出错: {e}")
+                    if not is_help_mode:
+                        print(f"ERROR: 创建目录 {path} 时出错: {e}")
                     raise
 
 # 确保日志目录存在

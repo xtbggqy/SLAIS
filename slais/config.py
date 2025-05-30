@@ -14,16 +14,22 @@ original_sys_path = sys.path.copy()
 project_root = Path(__file__).parent.parent.absolute()
 dotenv_path = project_root / '.env'
 
-# 显式打印调试信息
-print(f"DEBUG: 尝试从 {dotenv_path} 加载环境变量")
+# 检查是否是帮助模式，如果是则跳过调试输出
+is_help_mode = '--help' in sys.argv or '-h' in sys.argv
+
+# 显式打印调试信息（仅在非帮助模式下）
+if not is_help_mode:
+    print(f"DEBUG: 尝试从 {dotenv_path} 加载环境变量")
 
 # 确保.env文件存在
 if dotenv_path.exists():
     # 重新加载并强制覆盖现有环境变量
     load_dotenv(dotenv_path=dotenv_path, override=True)
-    print(f"DEBUG: 成功加载 .env 文件")
+    if not is_help_mode:
+        print(f"DEBUG: 成功加载 .env 文件")
 else:
-    print(f"警告: .env 文件未找到: {dotenv_path}")
+    if not is_help_mode:
+        print(f"警告: .env 文件未找到: {dotenv_path}")
 
 # 重置系统路径以避免潜在冲突
 sys.path = original_sys_path
@@ -136,10 +142,11 @@ class Settings(BaseSettings):
 # Create a global settings instance
 settings = Settings(_env_file=".env", _env_file_encoding="utf-8")
 
-# 添加关键配置的调试输出
-print(f"DEBUG: 配置加载完成，S2批处理大小: {settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
-print(f"DEBUG: 从环境变量加载的DOI: {settings.ARTICLE_DOI}")
-print(f"DEBUG: 最大问题生成数量: {settings.MAX_QUESTIONS_TO_GENERATE}")
+# 添加关键配置的调试输出（仅在非帮助模式下）
+if not is_help_mode:
+    print(f"DEBUG: 配置加载完成，S2批处理大小: {settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
+    print(f"DEBUG: 从环境变量加载的DOI: {settings.ARTICLE_DOI}")
+    print(f"DEBUG: 最大问题生成数量: {settings.MAX_QUESTIONS_TO_GENERATE}")
 
 # Update module-level variables to use the settings instance
 PUBMED_API_BASE_URL = settings.PUBMED_API_BASE_URL

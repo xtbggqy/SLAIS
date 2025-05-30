@@ -5,47 +5,93 @@ import os
 import datetime
 from pathlib import Path
 import csv # Import csv module
-
-# 正确设置PYTHONPATH或确保项目结构允许这些导入
-from pathlib import Path
-import sys
+import sys # Ensure sys is imported for sys.argv and sys.executable
 
 # 确保项目根目录在路径中
 project_root = Path(__file__).parent.absolute()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# 先加载配置，确保环境变量正确设置
-from slais import config
-from slais.utils.logging_utils import logger, setup_logging
+# 延迟导入配置和日志相关模块，只有在非帮助模式且参数有效时才导入
+def initialize_app_dependencies():
+    """延迟初始化应用依赖项（配置、日志等）"""
+    global config, logger, setup_logging
+    global ChatOpenAI, PromptTemplate
+    global PDFParsingAgent, MetadataFetchingAgent
+    global MethodologyAnalysisAgent, InnovationExtractionAgent, QAGenerationAgent
+    global StorytellingAgent, MindMapAgent, TokenUsageCallbackHandler
+    global generate_enhanced_report, ImageAnalysisAgent
+    
+    # 先加载配置，确保环境变量正确设置
+    from slais import config
+    from slais.utils.logging_utils import logger, setup_logging
+    
+    from langchain_openai import ChatOpenAI
+    from langchain.prompts import PromptTemplate
+    
+    from agents.pdf_parsing_agent import PDFParsingAgent
+    from agents.metadata_fetching_agent import MetadataFetchingAgent
+    from agents.llm_analysis_agent import (
+        MethodologyAnalysisAgent,
+        InnovationExtractionAgent,
+        QAGenerationAgent,
+        StorytellingAgent,
+        MindMapAgent
+    )
+    from agents.callbacks import TokenUsageCallbackHandler
+    from agents.formatting_utils import generate_enhanced_report
+    from agents.image_analysis_agent import ImageAnalysisAgent
 
-# 打印关键配置项，验证是否正确加载
-logger.info(f"主程序启动，配置检查：")
-logger.info(f"ARTICLE_DOI: {config.settings.ARTICLE_DOI}")
-logger.info(f"SEMANTIC_SCHOLAR_API_BATCH_SIZE: {config.settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
-logger.info(f"MAX_QUESTIONS_TO_GENERATE: {config.settings.MAX_QUESTIONS_TO_GENERATE}")
+# 延迟日志输出，只在非帮助模式下执行
+def log_configuration_info():
+    """在非帮助模式下输出配置信息"""
+    logger.info(f"模块加载时配置检查：")
+    logger.info(f"ARTICLE_DOI: {config.settings.ARTICLE_DOI}")
+    logger.info(f"SEMANTIC_SCHOLAR_API_BATCH_SIZE: {config.settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
+    logger.info(f"MAX_QUESTIONS_TO_GENERATE: {config.settings.MAX_QUESTIONS_TO_GENERATE}")
 
-from langchain_openai import ChatOpenAI # 直接导入ChatOpenAI
-from langchain.prompts import PromptTemplate # 导入PromptTemplate
+# Helper function to detect if running in Streamlit
+def _get_streamlit_script_run_ctx():
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        return get_script_run_ctx()
+    except ImportError:
+        # Fallback for older Streamlit versions or different import paths removed
+        # as streamlit.report_thread caused an import error.
+        # If this function returns None, we assume not in Streamlit context.
+        return None
 
-from agents.pdf_parsing_agent import PDFParsingAgent
-from agents.metadata_fetching_agent import MetadataFetchingAgent
-from agents.llm_analysis_agent import (
-    MethodologyAnalysisAgent,
-    InnovationExtractionAgent,
-    QAGenerationAgent,
-    StorytellingAgent,
-    MindMapAgent
-)
-from agents.callbacks import TokenUsageCallbackHandler # 新增导入
-from agents.formatting_utils import generate_enhanced_report # 从新模块导入格式化函数
-from agents.image_analysis_agent import ImageAnalysisAgent
-
-async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: str):
+async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: str, progress_callback=None):
     """
     完整的文章处理流程。
+    Args:
+        pdf_path (str): PDF文件路径。
+        article_doi (str): 文章DOI。
+        ncbi_email (str): NCBI邮箱。
+        progress_callback (callable, optional): 用于更新进度的回调函数，接收 (percentage, text) 参数。
     """
+    # 确保导入必要的依赖项
+    from slais.utils.logging_utils import logger
+    from slais import config
+    from langchain_openai import ChatOpenAI
+    from agents.callbacks import TokenUsageCallbackHandler
+    from agents.pdf_parsing_agent import PDFParsingAgent
+    from agents.metadata_fetching_agent import MetadataFetchingAgent
+    from agents.llm_analysis_agent import (
+        MethodologyAnalysisAgent,
+        InnovationExtractionAgent,
+        QAGenerationAgent,
+        StorytellingAgent,
+        MindMapAgent
+    )
+    from agents.image_analysis_agent import ImageAnalysisAgent
+    
     logger.info(f"开始处理文章，PDF路径: {pdf_path}, DOI: {article_doi}")
+
+    def update_progress(percentage: int, text: str):
+        if progress_callback:
+            progress_callback(percentage, text)
+        logger.info(f"进度更新: {percentage}% - {text}")
 
     # 1. 初始化LLM客户端 (支持.env配置的模型)
     # 文本 LLM
@@ -111,15 +157,35 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
 
     # 3. 执行流程
     analysis_results = {}
+    # 阶段时间记录
+    stage_times = {}
+    stage_status = {}
+    stage_costs = {}
+
+    def record_stage(stage_name, start_time, end_time):
+        now = end_time.strftime("%H:%M:%S")
+        duration = (end_time - start_time).total_seconds()
+        stage_times[stage_name] = now
+        stage_status[stage_name] = "完成"
+        stage_costs[stage_name] = duration
+        logger.info(f"阶段记录成功: {{'阶段': '{stage_name}', '完成时间': '{now}', '耗时_秒': {duration:.2f}, '状态': '完成'}}")
 
     # 3.1 PDF解析
-    logger.info("步骤 1: 解析PDF内容...")
+    update_progress(10, "步骤 1/6：解析PDF内容...")
+    start_time_pdf_parsing = datetime.datetime.now() # 初始化 start_time_pdf_parsing
     markdown_content = await pdf_parser.extract_content(pdf_path)
+    record_stage("PDF内容解析", start_time_pdf_parsing, datetime.datetime.now())
+
     if not markdown_content:
         logger.error("PDF内容提取失败，流程中止。")
-        return None
-    analysis_results["pdf_markdown_content_length"] = len(markdown_content)
-    logger.info(f"PDF内容提取完成，Markdown长度: {len(markdown_content)}")
+        stage_status["PDF内容解析"] = "失败" # 标记失败状态
+        # 考虑是否应该在这里也记录一个耗时，即使是失败的
+        # 如果流程在此处中止，后续阶段将不会被记录
+        # return None # 如果提前返回，确保前端能处理部分 stage_times 或无 stage_times 的情况
+    record_stage("PDF内容解析", start_time_pdf_parsing, datetime.datetime.now())
+
+    analysis_results["pdf_markdown_content_length"] = len(markdown_content) if markdown_content else 0
+    update_progress(20, "步骤 1/6：PDF内容解析完成。")
 
     # 新增：提取图片路径列表（图片统一存放在 output/<pdf_stem>/<pdf_stem>_markdown/images 目录，且为相对路径）
     pdf_stem = Path(pdf_path).stem
@@ -144,18 +210,27 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     analysis_results["image_paths"] = image_paths
 
     # 3.1b 图片内容分析（并发）
-    if image_paths:
-        logger.info(f"检测到 {len(image_paths)} 张图片，开始分析图片内容...")
-        image_analysis_results = await image_agent.analyze_images(
-            [str(markdown_dir / p) for p in image_paths],
-            context=markdown_content,
-            callbacks=callbacks_list
-        )
-        analysis_results["image_analysis"] = image_analysis_results
-        logger.info(f"图片内容分析完成，获得 {len(image_analysis_results)} 条描述。")
-    else:
+    if image_llm and image_paths: # 仅当image_llm成功初始化且有图片路径时才分析
+        update_progress(25, f"步骤 2/6：检测到 {len(image_paths)} 张图片，开始分析图片内容...")
+        try:
+            image_analysis_results = await image_agent.analyze_images(
+                [str(markdown_dir / p) for p in image_paths],
+                context=markdown_content,
+                callbacks=callbacks_list
+            )
+            analysis_results["image_analysis"] = image_analysis_results
+            update_progress(35, f"步骤 2/6：图片内容分析完成，获得 {len(image_analysis_results)} 条描述。")
+        except Exception as e:
+            logger.error(f"图片内容分析过程中发生错误: {e}")
+            analysis_results["image_analysis"] = []
+            update_progress(35, "步骤 2/6：图片内容分析失败。")
+    elif not image_llm:
+        logger.warning("图片LLM未成功初始化，跳过图片内容分析。")
         analysis_results["image_analysis"] = []
-        logger.info("未检测到可分析的图片。")
+        update_progress(35, "步骤 2/6：图片LLM初始化失败，跳过图片分析。")
+    else: # image_llm存在，但image_paths为空
+        analysis_results["image_analysis"] = []
+        update_progress(35, "步骤 2/6：未检测到可分析的图片。")
 
     # 新增：将图片内容分析结果格式化为Markdown字符串，供LLM分析用
     def format_image_analysis_md(image_analysis, image_paths):
@@ -171,23 +246,23 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
                     if p in img_path or Path(img_path).name == Path(p).name:
                         rel_img_path = p
                         break
-            lines.append(f"图片{idx+1}: {rel_img_path}\n结构化描述: {desc}\n")
-        return "\n".join(lines)
+            lines.append(f"图片{idx+1}: {rel_img_path}\\n结构化描述: {desc}\\n")
+        return "\\n".join(lines)
     image_analysis_md = format_image_analysis_md(analysis_results["image_analysis"], analysis_results["image_paths"])
 
     # 合并文献内容和图片分析内容，供LLM分析
-    full_content = markdown_content + "\n\n图片内容分析：\n" + image_analysis_md
+    full_content = markdown_content + "\\n\\n图片内容分析：\\n" + image_analysis_md
 
     # 3.2 元数据获取
-    logger.info("步骤 2: 获取元数据...")
+    update_progress(40, "步骤 3/6：获取元数据...")
     metadata = await metadata_fetcher.fetch_metadata(doi=article_doi, email=ncbi_email)
     analysis_results["metadata"] = metadata
-    logger.info("元数据获取完成。")
+    update_progress(50, "步骤 3/6：元数据获取完成。")
     s2_info = metadata.get("s2_info")
     pubmed_info = metadata.get("pubmed_info")
 
     # 3.3-3.9 LLM分析并发执行
-    logger.info("步骤 3-9: 并发执行LLM分析任务...")
+    update_progress(60, "步骤 4/6：LLM分析中...")
     tasks = {
         "methodology_analysis": methodology_analyzer.analyze_methodology(
             full_content, callbacks=callbacks_list),
@@ -208,9 +283,10 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
             analysis_results[key] = None
         else:
             analysis_results[key] = value
+    update_progress(70, "步骤 4/6：LLM分析完成。")
 
     # 3.5 问答生成 - 再为每个问题生成答案（单独并发）
-    logger.info("步骤 5b: 为每个问题生成答案...")
+    update_progress(75, "步骤 5/6：为每个问题生成答案...")
     questions = analysis_results.get("questions") or []
     if questions:
         qa_pairs = await qa_generator.generate_answers_batch(
@@ -221,15 +297,16 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     else:
         qa_pairs = []
     analysis_results["qa_pairs"] = qa_pairs
+    update_progress(80, "步骤 5/6：问答生成完成。")
 
     # 3.6 (可选) 获取参考文献和相关文章
     if s2_info and s2_info.get("paperId"):
-        logger.info("步骤 6: 获取参考文献...")
+        update_progress(85, "步骤 6/6：获取参考文献...")
         references_data = await metadata_fetcher.fetch_references(s2_info["paperId"], ncbi_email)
         analysis_results["references_data"] = references_data
-        logger.info(f"获取了 {len(references_data.get('reference_dois', []))} 条参考文献的DOI。")
+        update_progress(90, f"步骤 6/6：获取了 {len(references_data.get('reference_dois', []))} 条参考文献的DOI。")
     else:
-        logger.info(f"步骤 6: 跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效 (s2_info: {s2_info is not None}, paperId present: {s2_info.get('paperId') if s2_info else 'N/A'})。")
+        update_progress(90, f"步骤 6/6：跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效。")
         analysis_results["references_data"] = {
             "source_paper_id": s2_info.get("paperId") if s2_info else "N/A",
             "reference_dois": [],
@@ -238,17 +315,35 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         }
 
     if pubmed_info and pubmed_info.get("pmid"):
-        logger.info("步骤 7: 获取相关文章 (PubMed)...")
+        update_progress(95, "步骤 6/6：获取相关文章 (PubMed)...")
         related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_info["pmid"], ncbi_email)
         analysis_results["related_articles_pubmed"] = related_articles_pubmed
-        logger.info(f"获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
+        update_progress(98, f"步骤 6/6：获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
+    else:
+        update_progress(98, "步骤 6/6：未检测到可获取的相关文章。")
 
-    logger.info("所有处理步骤完成。")
+    update_progress(100, "所有处理步骤完成。")
     token_callback_handler.log_total_usage()
-    return analysis_results
+    
+    # 在 process_article_pipeline 函数的末尾，返回之前
+    logger.info(f"最终返回的阶段时间信息 (stage_times): {stage_times}")
+    logger.info(f"最终返回的阶段状态信息 (stage_status): {stage_status}")
+    logger.info(f"最终返回的阶段耗时信息 (stage_costs): {stage_costs}")
+    
+    # 返回分析结果和阶段时间信息
+    return {
+        "analysis_results": analysis_results,
+        "stage_times": stage_times,
+        "stage_status": stage_status,
+        "stage_costs": stage_costs,
+        "total_token_usage": token_callback_handler.get_total_usage_and_cost()
+    }
 
 def save_csv_report(data: list, filepath: Path, fieldnames: list):
     """Saves data to a CSV file with enhanced error handling and data validation."""
+    # 确保导入必要的依赖项
+    from slais.utils.logging_utils import logger
+    
     try:
         # 确保所有记录都有所有需要的字段
         for item in data:
@@ -277,6 +372,11 @@ def save_report(results: dict, pdf_path: str):
     """
     将分析结果保存为Markdown和相关的CSV报告。
     """
+    # 确保导入必要的依赖项
+    from slais.utils.logging_utils import logger
+    from slais import config
+    from agents.formatting_utils import generate_enhanced_report
+    
     if not results:
         logger.warning("没有结果可保存。")
         return
@@ -343,7 +443,7 @@ def run_web_app():
     启动Streamlit Web界面。
     """
     try:
-        import streamlit as st
+        import streamlit as st # Import streamlit here if not already at top
     except ImportError:
         print("未检测到streamlit库，请先运行: pip install streamlit")
         return
@@ -355,14 +455,13 @@ async def main_async():
     """
     异步主函数，协调整个流程。
     """
-    setup_logging() # 初始化日志系统
-
     parser = argparse.ArgumentParser(description="PDF文献智能分析与洞察系统 (SLAIS)")
     parser.add_argument("--pdf", type=str, help="要分析的PDF文件路径。")
     parser.add_argument("--web", action="store_true", help="以Web界面模式运行（Streamlit）")
     args = parser.parse_args()
 
-    if args.web:
+    if args.web: # This flag's behavior might be less direct now with the new main()
+        logger.info("`--web` flag detected in main_async. Calling run_web_app().")
         run_web_app()
         return
 
@@ -370,8 +469,9 @@ async def main_async():
     article_doi_to_process = config.settings.ARTICLE_DOI
     ncbi_email_for_requests = config.settings.NCBI_EMAIL
 
-    if not Path(pdf_to_process).exists():
-        logger.error(f"指定的PDF文件不存在: {pdf_to_process}")
+    if not pdf_to_process or not Path(pdf_to_process).exists(): # Added check for pdf_to_process being None/empty
+        logger.error(f"指定的PDF文件不存在或未提供: {pdf_to_process}")
+        logger.error("请使用 --pdf 参数指定一个有效的PDF文件路径。")
         return
 
     if not article_doi_to_process:
@@ -395,9 +495,76 @@ async def main_async():
 
 def main():
     """
-    主入口函数，简化脚本结构，便于管理和调用。
+    Ensures the Streamlit web application is run.
+    If the script is executed directly (e.g., `python app.py`), it launches
+    the Streamlit server as a subprocess.
+    If the script is already being run by Streamlit, this function calls
+    the web app's main UI function.
     """
-    asyncio.run(main_async())
+    ctx = _get_streamlit_script_run_ctx()
+
+    if ctx:
+        # Already running in Streamlit context
+        logger.info("脚本已在Streamlit环境中运行。调用 run_web_app()。")
+        run_web_app()
+    else:
+        # Not running in Streamlit context, launch Streamlit via subprocess
+        logger.info("脚本未在Streamlit环境中运行。尝试通过subprocess启动Streamlit。")
+        import subprocess
+        # import sys # Already imported at the top
+        # import os  # Already imported at the top
+        try:
+            script_path = os.path.abspath(__file__)
+            logger.info(f"执行: {sys.executable} -m streamlit run {script_path}")
+            subprocess.run([sys.executable, "-m", "streamlit", "run", script_path], check=True)
+        except FileNotFoundError:
+            logger.error("未找到streamlit。请确保已安装streamlit: pip install streamlit")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"运行streamlit失败: {e}")
 
 if __name__ == "__main__":
-    main()
+    # 首先检查是否是帮助请求或者进行参数预验证，避免在错误参数时加载配置和日志
+    try:
+        # 创建临时解析器用于验证参数和处理帮助
+        temp_parser = argparse.ArgumentParser(
+            description="PDF文献智能分析与洞察系统 (SLAIS)",
+            epilog="""
+使用示例:
+  python app.py                           # 启动Web界面模式 (Streamlit)
+  python app.py --pdf path/to/file.pdf    # CLI模式处理指定PDF文件
+  python app.py --web                     # 显式启动Web界面模式
+  python app.py --help                    # 显示此帮助信息
+
+注意: CLI模式需要在 .env 文件中配置 ARTICLE_DOI 和 NCBI_EMAIL
+            """,
+            formatter_class=argparse.RawDescriptionHelpFormatter
+        )
+        temp_parser.add_argument("--pdf", type=str, help="要分析的PDF文件路径 (CLI模式)")
+        temp_parser.add_argument("--web", action="store_true", help="以Web界面模式运行 (Streamlit)")
+        
+        # 预解析参数 - 这会处理帮助和捕获无效参数
+        args = temp_parser.parse_args()
+        
+        # 如果到了这里，说明参数是有效的，现在可以安全地初始化应用依赖
+        initialize_app_dependencies()
+        setup_logging()
+        log_configuration_info()
+        
+    except SystemExit as e:
+        # argparse 在帮助或错误时会调用 sys.exit()
+        # 如果是帮助 (exit code 0) 或参数错误 (exit code 2)，直接退出而不初始化日志
+        sys.exit(e.code)
+    
+    # 判断运行模式
+    if args.pdf:
+        # CLI PDF 处理模式
+        logger.info("检测到CLI PDF处理模式。")
+        asyncio.run(main_async())
+    elif args.web:
+        # 显式Web模式
+        logger.info("显式请求Web界面模式。")
+        main()
+    else:
+        # 默认情况下启动Web界面
+        logger.info("默认进入Web UI模式或由Streamlit直接执行。")
+        main()

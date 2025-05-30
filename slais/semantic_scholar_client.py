@@ -122,8 +122,7 @@ class SemanticScholarClient:
             params: URL查询参数 (可选)
             timeout_multiplier: 超时时间倍数，用于批量请求等需要更长时间的操作
             error_msg_prefix: 错误日志前缀，用于标识请求类型
-            
-        Returns:
+              Returns:
             成功时返回解析后的JSON数据，失败时返回None
         """
         for attempt in range(self.retry_count):

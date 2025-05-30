@@ -1,0 +1,13 @@
+2025-05-30 12:40:20,391 - slais_app - INFO - SLAIS 日志系统已启动 - 日志文件: logs\slais_20250530_123702.log
+2025-05-30 12:40:20,392 - slais_app - INFO - 模块加载时配置检查：
+2025-05-30 12:40:20,393 - slais_app - INFO - ARTICLE_DOI: 10.1126/science.aao4593
+2025-05-30 12:40:20,393 - slais_app - INFO - SEMANTIC_SCHOLAR_API_BATCH_SIZE: 25
+2025-05-30 12:40:20,394 - slais_app - INFO - MAX_QUESTIONS_TO_GENERATE: 25
+2025-05-30 12:40:20,394 - slais_app - INFO - 默认进入Web UI模式或由Streamlit直接执行。
+2025-05-30 12:40:20,394 - slais_app - INFO - 脚本已在Streamlit环境中运行。调用 run_web_app()。
+2025-05-30 12:40:20,417 - slais_app - INFO - Web app 从 session_state 获取的 stage_times: {'PDF内容解析': '12:37:55'}
+2025-05-30 12:40:20,418 - slais_app - INFO - Web app 从 session_state 获取的 stage_status: {'PDF内容解析': '完成'}
+2025-05-30 12:40:20,418 - slais_app - INFO - Web app 从 session_state 获取的 stage_costs: {'PDF内容解析': 22.78546}
+2025-05-30 12:40:20,426 - slais_app - INFO - 增强版Markdown分析报告已保存到: output\tmpf2vrlly3\tmpf2vrlly3_analysis_report_20250530_124020.md
+2025-05-30 12:40:20,433 - slais_app - INFO - CSV报告已保存到: output\tmpf2vrlly3\tmpf2vrlly3_references_20250530_124020.csv (成功写入 34/34 条记录)
+2025-05-30 12:40:20,439 - slais_app - INFO - CSV报告已保存到: output\tmpf2vrlly3\tmpf2vrlly3_related_pubmed_20250530_124020.csv (成功写入 50/50 条记录)

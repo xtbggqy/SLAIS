@@ -243,15 +243,25 @@ class PubMedClient:
         self.efetch_batch_size = getattr(config.settings, 'PUBMED_EFETCH_BATCH_SIZE', 200)
         self._rate_limit_lock = asyncio.Lock()
         self._last_request_time = 0
-        self._min_interval = 0.35  # PubMed推荐每秒不超过3次请求
-        logger.info(f"PubMedClient initialized. Email: {self.email}, API_KEY_PROVIDED: {bool(self.api_key)}, Max Results: {self.max_results}, Years Back: {self.years_back}")
+        
+        # 设置基于API密钥状态的最小请求间隔
+        if self.api_key:
+            # PubMed允许使用API密钥时每秒10次请求
+            self._min_interval = getattr(config.settings, 'PUBMED_API_KEY_INTERVAL', 0.11) # 略高于0.1s以确保安全
+        else:
+            # PubMed在没有API密钥时建议每秒不超过3次请求
+            self._min_interval = getattr(config.settings, 'PUBMED_NO_API_KEY_INTERVAL', 0.35) # 略高于0.33s
+            
+        logger.info(f"PubMedClient initialized. Email: {self.email}, API_KEY_PROVIDED: {bool(self.api_key)}, Max Results: {self.max_results}, Years Back: {self.years_back}, Min Interval: {self._min_interval}s")
     
     async def _wait_for_rate_limit(self):
         async with self._rate_limit_lock:
             now = time.time()
             elapsed = now - self._last_request_time
             if elapsed < self._min_interval:
-                await asyncio.sleep(self._min_interval - elapsed)
+                wait_time = self._min_interval - elapsed + random.uniform(0.1, 0.5)
+                logger.debug(f"[PubMedClient] 等待 {wait_time:.2f} 秒以遵守速率限制")
+                await asyncio.sleep(wait_time)
             self._last_request_time = time.time()
 
     def _exponential_backoff(self, attempt: int) -> float:
@@ -292,7 +302,7 @@ class PubMedClient:
 
     @retry(
         stop=stop_after_attempt(config.settings.PUBMED_RETRY_COUNT), # 使用配置的重试次数
-        wait=wait_exponential(multiplier=1, min=1, max=10), # 指数等待
+        wait=wait_exponential(multiplier=1, min=2, max=30), # 增加指数等待时间
         retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)), # 更新为aiohttp的异常类型
         before_sleep=before_sleep_log(logger, logging.WARNING), # 重试前记录日志
         reraise=True # 重试失败后重新引发异常
@@ -344,8 +354,9 @@ class PubMedClient:
             
             # 步骤1：使用 elink 获取相关文章历史记录
             async with aiohttp.ClientSession() as session:
-                timeout = aiohttp.ClientTimeout(total=self.timeout)
+                timeout = aiohttp.ClientTimeout(total=self.timeout * 2) # 增加超时时间
                 
+                await self._wait_for_rate_limit()
                 async with session.get(url, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
                     response.raise_for_status()
                     elink_data = await response.json()
@@ -373,6 +384,7 @@ class PubMedClient:
                     if self.api_key:
                         esearch_url += f"&api_key={self.api_key}"
                     
+                    await self._wait_for_rate_limit()
                     async with session.get(esearch_url, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
                         response.raise_for_status()
                         esearch_data = await response.json()
@@ -413,6 +425,7 @@ class PubMedClient:
                             if self.api_key:
                                 efetch_url += f"&api_key={self.api_key}"
                             
+                            await self._wait_for_rate_limit()
                             async with session.get(efetch_url, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
                                 response.raise_for_status()
                                 efetch_text = await response.text()
@@ -450,7 +463,7 @@ class PubMedClient:
                             
                             # 如果不是最后一批，加入延迟
                             if batch < num_batches - 1:
-                                await asyncio.sleep(config.settings.PUBMED_REQUEST_DELAY or 0.33) # 默认延迟约1/3秒
+                                await asyncio.sleep(config.settings.PUBMED_REQUEST_DELAY or 1.0) # 增加默认延迟时间
                         
                         logger.info(f"Found {len(all_results)} related articles for PMID: {pmid}")
                         return all_results[:effective_max_results]  # 确保不超过请求的最大数量
@@ -464,7 +477,7 @@ class PubMedClient:
 
     @retry(
         stop=stop_after_attempt(config.settings.PUBMED_RETRY_COUNT),
-        wait=wait_exponential(multiplier=1, min=1, max=10),
+        wait=wait_exponential(multiplier=1, min=2, max=30), # 增加指数等待时间
         retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)), # 更新为aiohttp的异常类型
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True
@@ -492,8 +505,9 @@ class PubMedClient:
             params["api_key"] = self.api_key
 
         try:
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
+            timeout = aiohttp.ClientTimeout(total=self.timeout * 2) # 增加超时时间
             async with aiohttp.ClientSession() as session:
+                await self._wait_for_rate_limit()
                 async with session.get(efetch_url, params=params, timeout=timeout, ssl=self.ssl_verify) as response:
                     response.raise_for_status()
                     
@@ -540,7 +554,7 @@ class PubMedClient:
             raise  # 重新引发，由tenacity处理
 
     async def get_articles_by_pmids(self, pmids: List[str], email: str) -> List[Dict[str, Any]]:
-        """通过PMID列表批量获取文章详情。"""
+        """通过PMID列表批量获取文章详情"""
         if not pmids: return []
         logger.info(f"开始为 {len(pmids)} 个PMID批量获取文章详情 (PubMed efetch)。")
         
@@ -548,7 +562,7 @@ class PubMedClient:
         pmid_batches = [pmids[i:i + self.efetch_batch_size] for i in range(0, len(pmids), self.efetch_batch_size)]
         headers = {'User-Agent': f'{self.tool}/1.0 ({email})'}
 
-        timeout = aiohttp.ClientTimeout(total=self.timeout * 2) # 批量请求可能需要更长时间
+        timeout = aiohttp.ClientTimeout(total=self.timeout * 3) # 增加超时时间
         async with aiohttp.ClientSession() as session:
             for i, pmid_batch in enumerate(pmid_batches):
                 if not pmid_batch: continue
@@ -558,6 +572,7 @@ class PubMedClient:
                     'retmode': 'xml', 'email': email, 'tool': self.tool
                 }
                 try:
+                    await self._wait_for_rate_limit()
                     async with session.get(f"{self.base_url}/efetch.fcgi", params=efetch_params, headers=headers, timeout=timeout, ssl=self.ssl_verify) as response:
                         response.raise_for_status()
                         efetch_content = await response.text()
@@ -587,7 +602,7 @@ class PubMedClient:
                         for idx, article_details in enumerate(parsed_articles_in_batch):
                             if article_details is None:
                                 continue
-                                
+                            
                             crossref_result = crossref_results[idx]
                             if isinstance(crossref_result, Exception):
                                 logger.error(f"CrossRef 查询 PMID {article_details.get('pmid', 'unknown')} 出错: {crossref_result}")
@@ -619,7 +634,7 @@ class PubMedClient:
                     logger.error(f"批量efetch PMIDs时发生错误: {e}")
                 
                 if i < len(pmid_batches) - 1: # 批次间延迟
-                    await asyncio.sleep(getattr(config.settings, 'PUBMED_REQUEST_DELAY', 0.33))
+                    await asyncio.sleep(getattr(config.settings, 'PUBMED_REQUEST_DELAY', 1.0)) # 增加默认延迟时间
                     
         logger.info(f"批量获取完成，共获得 {len(all_article_details)} 篇文章的详细信息。")
         return all_article_details

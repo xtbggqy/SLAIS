@@ -3,13 +3,20 @@ import json
 import re
 import fitz  # PyMuPDF
 import logging
+from pathlib import Path
+
+# # 设置 magic_pdf 配置文件路径（在导入前设置）
+# project_root = Path(__file__).parent.parent  # 项目根目录
+# magic_pdf_config = project_root / "magic-pdf.json"
+# if magic_pdf_config.exists():
+#     os.environ["MINERU_TOOLS_CONFIG_JSON"] = str(magic_pdf_config)
+
 from magic_pdf.data.data_reader_writer import FileBasedDataWriter, FileBasedDataReader
 from magic_pdf.data.dataset import PymuDocDataset
 from magic_pdf.model.doc_analyze_by_custom_model import doc_analyze
 from magic_pdf.config.enums import SupportedPdfParseMethod
 from slais.utils.logging_utils import logger
 from slais import config
-from pathlib import Path
 
 async def convert_pdf_to_markdown(pdf_path, output_dir=None):
     """将PDF转换为Markdown格式

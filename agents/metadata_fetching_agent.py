@@ -213,26 +213,93 @@ class MetadataFetchingAgent:
             if pmids:
                 logger.info(f"发现 {len(pmids)} 个参考文献已有PMID，从PubMed获取详细信息...")
                 pubmed_details = await self.pubmed_client.get_articles_by_pmids(pmids, email or "")
-                
-                # 创建PMID到PubMed详情的映射
+                  # 创建PMID到PubMed详情的映射
                 pmid_to_pubmed = {detail.get("pmid"): detail for detail in pubmed_details if detail.get("pmid")}
-                
-                # 更新参考文献的PubMed信息
+                  # 更新参考文献的PubMed信息
                 updated_count = 0
+                field_update_stats = {
+                    "authors_str": 0,
+                    "authors": 0,
+                    "pub_date": 0,
+                    "title": 0,
+                    "journal": 0,
+                    "abstract": 0
+                }
+                
                 for ref in enriched_details:
                     pmid = ref.get("pmid", "")
                     if pmid and pmid in pmid_to_pubmed:
                         pubmed_info = pmid_to_pubmed[pmid]
+                        initial_empty_fields = []
+                        
+                        # 记录初始为空的字段
+                        if not ref.get("authors_str"):
+                            initial_empty_fields.append("authors_str")
+                        if not ref.get("authors"):
+                            initial_empty_fields.append("authors")
+                        if not ref.get("pub_date"):
+                            initial_empty_fields.append("pub_date")
+                        if not ref.get("title"):
+                            initial_empty_fields.append("title")
+                        if not ref.get("journal"):
+                            initial_empty_fields.append("journal")
+                        if not ref.get("abstract"):
+                            initial_empty_fields.append("abstract")
+                        
                         # 更新PubMed相关字段
                         ref["pmid_link"] = pubmed_info.get("pmid_link", ref.get("pmid_link", ""))
                         ref["pmcid"] = pubmed_info.get("pmcid", ref.get("pmcid", ""))
                         ref["pmcid_link"] = pubmed_info.get("pmcid_link", ref.get("pmcid_link", ""))
+                        
+                        # 更新作者信息 - 优先使用PubMed数据（更准确）
+                        if pubmed_info.get("authors_str"):
+                            ref["authors_str"] = pubmed_info.get("authors_str", "")
+                            field_update_stats["authors_str"] += 1
+                        # 更新authors列表
+                        if pubmed_info.get("authors"):
+                            ref["authors"] = pubmed_info.get("authors", [])
+                            field_update_stats["authors"] += 1
+                        
+                        # 更新发表日期 - 优先使用PubMed数据（更准确）
+                        if pubmed_info.get("pub_date"):
+                            ref["pub_date"] = pubmed_info.get("pub_date", "")
+                            field_update_stats["pub_date"] += 1
+                        
+                        # 更新标题（如果原标题为空）
+                        if pubmed_info.get("title") and not ref.get("title"):
+                            ref["title"] = pubmed_info.get("title", "")
+                            field_update_stats["title"] += 1
+                        
+                        # 更新期刊信息（如果原期刊为空）
+                        if pubmed_info.get("journal") and not ref.get("journal"):
+                            ref["journal"] = pubmed_info.get("journal", "")
+                            field_update_stats["journal"] += 1
+                        
                         # 如果参考文献的摘要为空，且PubMed有摘要，则使用PubMed的摘要
                         if not ref.get("abstract") and pubmed_info.get("abstract"):
                             ref["abstract"] = pubmed_info.get("abstract", "")
+                            field_update_stats["abstract"] += 1
+                        
+                        # 记录这条参考文献的字段更新情况
+                        updated_fields = []
+                        if "authors_str" in initial_empty_fields and ref.get("authors_str"):
+                            updated_fields.append("authors_str")
+                        if "pub_date" in initial_empty_fields and ref.get("pub_date"):
+                            updated_fields.append("pub_date")
+                        if "title" in initial_empty_fields and ref.get("title"):
+                            updated_fields.append("title")
+                        if "journal" in initial_empty_fields and ref.get("journal"):
+                            updated_fields.append("journal")
+                        if "abstract" in initial_empty_fields and ref.get("abstract"):
+                            updated_fields.append("abstract")
+                        
+                        if updated_fields:
+                            logger.debug(f"PMID {pmid} 的字段已从PubMed更新: {', '.join(updated_fields)}")
+                        
                         updated_count += 1
                 
                 logger.info(f"成功更新了 {updated_count} 条参考文献的PubMed信息")
+                logger.info(f"字段更新统计: authors_str: {field_update_stats['authors_str']}, pub_date: {field_update_stats['pub_date']}, title: {field_update_stats['title']}, journal: {field_update_stats['journal']}, abstract: {field_update_stats['abstract']}")
                 
                 # 更新references_data
                 references_data["full_references_details"] = enriched_details
