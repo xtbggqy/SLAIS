@@ -1,11 +1,16 @@
 # SLAIS 项目进展文档
 
-**版本：** 0.5 (更新于2025-05-16)
-**上次更新日期：** 2025-05-16
+**版本：** v1.2.1 (更新于2025-05-31)
+**上次更新日期：** 2025-05-31
 
 ## 如何运行 (调用方式)
 # 推荐用法
-streamlit run main.py -- --web
+# 启动 Web UI (Streamlit)
+python app.py
+# 或者显式指定 --web
+python app.py --web
+# 或者使用 streamlit 命令
+streamlit run app.py
 1.  **配置环境变量**:
     *   在项目根目录下创建或修改 `.env` 文件。
     *   必须设置以下变量：
@@ -23,15 +28,12 @@ streamlit run main.py -- --web
         *   其他API超时、重试次数等参数也可在 `slais/config.py` 中查看并按需在 `.env` 中覆盖。
 
 2.  **运行主程序**:
-    *   打开终端，导航到项目根目录 (`d:/C/Documents/Program/Python_file/article/ont_article`)。
-    *   执行命令:
+    *   打开终端，导航到项目根目录 (`d:/C/Documents/Program/Python_file/article/one_article`)。
+    *   执行命令 (CLI模式，处理默认或指定PDF):
         ```bash
-        python main.py
+        python app.py --pdf path/to/your/document.pdf 
         ```
-    *   如果需要处理特定的本地PDF文件（而不是依赖配置中的 `DEFAULT_PDF_PATH`），可以使用 `--pdf` 参数：
-        ```bash
-        python main.py --pdf path/to/your/document.pdf
-        ```
+        (如果未指定 `--pdf`，且 `.env` 中配置了 `DEFAULT_PDF_PATH` 和 `ARTICLE_DOI`，则会处理默认PDF)
 
 3.  **查看输出**:
     *   程序的运行日志和主要信息会打印在控制台。
@@ -43,7 +45,7 @@ streamlit run main.py -- --web
 ## 目录
 1.  项目结构与基本说明
 2.  项目详细说明
-    *   `main.py` - 主程序入口
+    *   `app.py` - 主程序入口
     *   `agents/` - 智能代理模块
     *   `slais/` - 核心功能模块
 3.  主要功能流程
@@ -56,12 +58,12 @@ streamlit run main.py -- --web
 
 当前项目 (SLAIS) 已发展为一个完整的PDF文献智能分析与洞察系统。以下是当前已实现的核心文件和目录结构及其基本说明：
 
-*   `main.py`: 项目的主程序入口，协调整个分析流程。
+*   `app.py`: 项目的主程序入口，协调整个分析流程，并处理命令行参数及Streamlit Web应用的启动。
 *   `agents/` - 智能代理模块。
     *   `base_agent.py`: 基础代理类定义，提供公共功能。
     *   `callbacks.py`: LLM调用的回调处理，用于追踪token使用和成本。
     *   `formatting_utils.py`: 输出格式化工具，用于美化报告和修复Mermaid代码。
-    *   `llm_analysis_agent.py`: 多种LLM分析代理实现，包括方法学分析、创新点提取、问答生成等。
+    *   `llm_analysis_agent.py`: 多种LLM分析代理实现，包括方法学分析、创新点提取、问答生成等。 (已更新以兼容最新LangChain版本)
     *   `metadata_fetching_agent.py`: 元数据获取代理，从外部API获取文献相关信息。
     *   `pdf_parsing_agent.py`: PDF解析代理，负责从PDF文件提取结构化内容。
     *   `prompts.py`: LLM提示模板定义。
@@ -78,11 +80,11 @@ streamlit run main.py -- --web
 
 ## 2. 项目详细说明
 
-### `main.py` - 主程序入口
+### `app.py` - 主程序入口
 
 *   **当前状态：** 已实现完整功能。
 *   **功能：**
-    *   作为命令行应用程序的入口点 (使用 `argparse` 解析参数)。
+    *   作为命令行应用程序 (`argparse`) 和 Streamlit Web 应用的统一入口点。
     *   协调全文分析流水线的各个组件。
     *   从 `.env` 文件获取配置，包括 `ARTICLE_DOI`、`OPENAI_API_KEY` 等。
     *   管理异步工作流，使用 `asyncio` 并行处理各种任务。
@@ -117,7 +119,7 @@ streamlit run main.py -- --web
 
 #### `llm_analysis_agent.py` - LLM分析代理
 
-*   **当前状态：** 已实现多种具体代理。
+*   **当前状态：** 已实现多种具体代理，并更新以兼容最新LangChain版本。
 *   **功能：**
     *   `MethodologyAnalysisAgent`: 分析研究方法、关键技术、优缺点等。
     *   `InnovationExtractionAgent`: 提取文献的核心创新点、解决的问题和应用前景。
@@ -127,12 +129,12 @@ streamlit run main.py -- --web
 
 #### `metadata_fetching_agent.py` - 元数据获取代理
 
-*   **当前状态：** 已实现。
+*   **当前状态：** 已实现，并优化了缓存处理逻辑。
 *   **功能：**
     *   封装与外部 API（如 PubMed、Semantic Scholar）的交互。
     *   获取文献的元数据，包括标题、作者、摘要等。
     *   获取文献的参考文献和相关文章。
-    *   实现请求速率限制和错误处理。
+    *   实现请求速率限制、错误处理和统一的缓存数据返回结构。
 
 #### `pdf_parsing_agent.py` - PDF解析代理
 
@@ -201,6 +203,12 @@ streamlit run main.py -- --web
 ---
 
 ## 4. 最新更新
+
+### 2025-05-31：核心逻辑修复与文档更新
+*   **LangChain兼容性**：更新 `agents/llm_analysis_agent.py` 中 `LLMChain` 的使用方法，以兼容 LangChain v0.1.17+ 的推荐语法，消除弃用警告。
+*   **元数据获取优化**：修复了 `agents/metadata_fetching_agent.py` 中处理缓存元数据时返回结构不一致的问题，确保 `app.py` 能正确提取 `s2_paper_id` 和 `pubmed_pmid`。
+*   **阶段指标记录完善**：改进了 `app.py` 中的 `process_article_pipeline` 函数，确保所有主要处理阶段（PDF解析、图片分析、元数据获取、LLM综合分析、问答对生成、参考文献获取、相关文章获取）的耗时和状态被准确记录和汇总，并修正了重复记录及键名不一致的问题。
+*   **文档同步更新**：根据上述代码修复和当前项目状态，更新了 `README.md`、`debug.md`、`phase.md` 和 `PROGRESS.md` 文档。
 
 ### 2025-05-16：报告美观性与交互性优化
 
@@ -296,4 +304,4 @@ streamlit run main.py -- --web
 
 ---
 
-*最后更新: 2025-05-16*
+*最后更新: 2025-05-31*

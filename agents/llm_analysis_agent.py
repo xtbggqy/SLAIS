@@ -22,10 +22,10 @@ class MethodologyAnalysisAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
         super().__init__(llm_client, provider_name="openai")
 
-    def _build_chain(self, prompt_template_str: str) -> LLMChain:
-        """构建并返回方法学分析的LLMChain。"""
+    def _build_chain(self, prompt_template_str: str):
+        """构建并返回方法学分析的链。"""
         prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
-        return LLMChain(llm=self.llm_client, prompt=prompt)
+        return prompt | self.llm_client
 
     async def analyze_methodology(
         self, 
@@ -60,10 +60,10 @@ class InnovationExtractionAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
         super().__init__(llm_client, provider_name="openai")
 
-    def _build_chain(self, prompt_template_str: str) -> LLMChain:
-        """构建并返回创新点提取的LLMChain。"""
+    def _build_chain(self, prompt_template_str: str):
+        """构建并返回创新点提取的链。"""
         prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
-        return LLMChain(llm=self.llm_client, prompt=prompt)
+        return prompt | self.llm_client
 
     async def extract_innovations(
         self, 
@@ -98,8 +98,8 @@ class QAGenerationAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
         super().__init__(llm_client, provider_name="openai")
 
-    def _build_chain(self, prompt_template_str: str) -> LLMChain:
-        """构建并返回问答生成的LLMChain。"""
+    def _build_chain(self, prompt_template_str: str):
+        """构建并返回问答生成的链。"""
         if prompt_template_str == QA_GENERATION_PROMPT:
             input_variables = ["content", "num_questions", "image_analysis"]
         elif prompt_template_str == BATCH_ANSWER_GENERATION_PROMPT:
@@ -108,7 +108,7 @@ class QAGenerationAgent(BaseResearchAgent):
             input_variables = ["content", "image_analysis"]
 
         prompt = PromptTemplate(template=prompt_template_str, input_variables=input_variables)
-        return LLMChain(llm=self.llm_client, prompt=prompt)
+        return prompt | self.llm_client
 
     async def generate_questions(
         self, 
@@ -158,7 +158,15 @@ class QAGenerationAgent(BaseResearchAgent):
             template=BATCH_ANSWER_GENERATION_PROMPT,
             input_variables=["content", "questions_json_list_string", "image_analysis"]
         )
-        chain = self._create_llm_chain(prompt_template_obj=prompt_template)
+        # 假设 _create_llm_chain 内部也使用 LLMChain，并进行相应替换
+        # 如果 _create_llm_chain 是一个简单包装，可以直接替换为:
+        # chain = prompt_template | self.llm_client
+        # 为保持现有结构，我们假设 _create_llm_chain 也会被更新或其内部已更新
+        # 如果 _create_llm_chain 只是返回 LLMChain(llm=self.llm_client, prompt=prompt_template_obj)
+        # 那么这里可以直接写成 chain = prompt_template | self.llm_client
+        # 为了安全起见，暂时保留对 _create_llm_chain 的调用，并假设它会被同步修改
+        # 或者，如果 _create_llm_chain 只是简单地创建 LLMChain，我们可以直接替换
+        chain = prompt_template | self.llm_client # 直接替换
 
         try:
             response = await chain.ainvoke({
@@ -255,10 +263,10 @@ class StorytellingAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
         super().__init__(llm_client, provider_name="openai")
 
-    def _build_chain(self, prompt_template_str: str) -> LLMChain:
-        """构建并返回讲故事的LLMChain。"""
+    def _build_chain(self, prompt_template_str: str):
+        """构建并返回讲故事的链。"""
         prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
-        return LLMChain(llm=self.llm_client, prompt=prompt)
+        return prompt | self.llm_client
 
     async def tell_story(
         self, 
@@ -285,15 +293,15 @@ class MindMapAgent(BaseResearchAgent):
     def __init__(self, llm_client: Any):
         super().__init__(llm_client, provider_name="openai")
 
-    def _build_chain(self, prompt_template_str: str) -> LLMChain:
-        """构建并返回生成脑图的LLMChain。"""
+    def _build_chain(self, prompt_template_str: str):
+        """构建并返回生成脑图的链。"""
         # 明确定义只使用"content"和"image_analysis"作为输入变量
         prompt = PromptTemplate(template=prompt_template_str, input_variables=["content", "image_analysis"])
         
         # 添加诊断日志以便调试
         logger.debug(f"MindMapAgent._build_chain: PromptTemplate.input_variables = {prompt.input_variables}")
         
-        return LLMChain(llm=self.llm_client, prompt=prompt)
+        return prompt | self.llm_client
 
     async def generate_mindmap(
         self, 
@@ -327,7 +335,7 @@ graph TD
 
             # 创建全新的提示和链，避免任何潜在的变量/缓存问题
             prompt = PromptTemplate(template=template_str, input_variables=["content", "image_analysis"])
-            chain = LLMChain(llm=self.llm_client, prompt=prompt)
+            chain = prompt | self.llm_client
             
             # 传递content和image_analysis参数
             response = await chain.ainvoke({

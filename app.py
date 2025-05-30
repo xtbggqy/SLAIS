@@ -174,15 +174,16 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     update_progress(10, "步骤 1/6：解析PDF内容...")
     start_time_pdf_parsing = datetime.datetime.now() # 初始化 start_time_pdf_parsing
     markdown_content = await pdf_parser.extract_content(pdf_path)
-    record_stage("PDF内容解析", start_time_pdf_parsing, datetime.datetime.now())
-
+    
     if not markdown_content:
         logger.error("PDF内容提取失败，流程中止。")
         stage_status["PDF内容解析"] = "失败" # 标记失败状态
+        record_stage("PDF内容解析", start_time_pdf_parsing, datetime.datetime.now()) # 记录失败状态的时间
         # 考虑是否应该在这里也记录一个耗时，即使是失败的
         # 如果流程在此处中止，后续阶段将不会被记录
         # return None # 如果提前返回，确保前端能处理部分 stage_times 或无 stage_times 的情况
-    record_stage("PDF内容解析", start_time_pdf_parsing, datetime.datetime.now())
+    else:
+        record_stage("PDF内容解析", start_time_pdf_parsing, datetime.datetime.now()) # 记录成功状态的时间
 
     analysis_results["pdf_markdown_content_length"] = len(markdown_content) if markdown_content else 0
     update_progress(20, "步骤 1/6：PDF内容解析完成。")
@@ -210,6 +211,8 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     analysis_results["image_paths"] = image_paths
 
     # 3.1b 图片内容分析（并发）
+    start_time_image_analysis = datetime.datetime.now()
+    current_stage_name_image = "图片内容分析"
     if image_llm and image_paths: # 仅当image_llm成功初始化且有图片路径时才分析
         update_progress(25, f"步骤 2/6：检测到 {len(image_paths)} 张图片，开始分析图片内容...")
         try:
@@ -219,17 +222,24 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
                 callbacks=callbacks_list
             )
             analysis_results["image_analysis"] = image_analysis_results
+            record_stage(current_stage_name_image, start_time_image_analysis, datetime.datetime.now())
             update_progress(35, f"步骤 2/6：图片内容分析完成，获得 {len(image_analysis_results)} 条描述。")
         except Exception as e:
             logger.error(f"图片内容分析过程中发生错误: {e}")
             analysis_results["image_analysis"] = []
+            stage_status[current_stage_name_image] = "失败"
+            record_stage(current_stage_name_image, start_time_image_analysis, datetime.datetime.now())
             update_progress(35, "步骤 2/6：图片内容分析失败。")
     elif not image_llm:
         logger.warning("图片LLM未成功初始化，跳过图片内容分析。")
         analysis_results["image_analysis"] = []
+        stage_status[current_stage_name_image] = "跳过 (LLM未初始化)"
+        record_stage(current_stage_name_image, start_time_image_analysis, datetime.datetime.now())
         update_progress(35, "步骤 2/6：图片LLM初始化失败，跳过图片分析。")
     else: # image_llm存在，但image_paths为空
         analysis_results["image_analysis"] = []
+        stage_status[current_stage_name_image] = "跳过 (无图片)"
+        record_stage(current_stage_name_image, start_time_image_analysis, datetime.datetime.now())
         update_progress(35, "步骤 2/6：未检测到可分析的图片。")
 
     # 新增：将图片内容分析结果格式化为Markdown字符串，供LLM分析用
@@ -255,14 +265,27 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
 
     # 3.2 元数据获取
     update_progress(40, "步骤 3/6：获取元数据...")
-    metadata = await metadata_fetcher.fetch_metadata(doi=article_doi, email=ncbi_email)
-    analysis_results["metadata"] = metadata
-    update_progress(50, "步骤 3/6：元数据获取完成。")
-    s2_info = metadata.get("s2_info")
-    pubmed_info = metadata.get("pubmed_info")
+    start_time_metadata = datetime.datetime.now()
+    current_stage_name_metadata = "元数据获取"
+    try:
+        metadata = await metadata_fetcher.fetch_metadata(doi=article_doi, email=ncbi_email)
+        analysis_results["metadata"] = metadata
+        record_stage(current_stage_name_metadata, start_time_metadata, datetime.datetime.now())
+        update_progress(50, "步骤 3/6：元数据获取完成。")
+    except Exception as e:
+        logger.error(f"元数据获取失败: {e}")
+        analysis_results["metadata"] = {"pubmed_info": None, "s2_info": None, "error": str(e)}
+        stage_status[current_stage_name_metadata] = "失败"
+        record_stage(current_stage_name_metadata, start_time_metadata, datetime.datetime.now())
+        update_progress(50, "步骤 3/6：元数据获取失败。")
+        
+    s2_info = analysis_results["metadata"].get("s2_info")
+    pubmed_info = analysis_results["metadata"].get("pubmed_info")
 
     # 3.3-3.9 LLM分析并发执行
     update_progress(60, "步骤 4/6：LLM分析中...")
+    start_time_llm_analysis = datetime.datetime.now()
+    current_stage_name_llm = "LLM综合分析"
     tasks = {
         "methodology_analysis": methodology_analyzer.analyze_methodology(
             full_content, callbacks=callbacks_list),
@@ -276,35 +299,57 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
             full_content, callbacks=callbacks_list)
     }
     # 并发执行
-    results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-    for key, value in zip(tasks.keys(), results):
-        if isinstance(value, Exception):
-            logger.error(f"{key} 分析任务出错: {value}")
-            analysis_results[key] = None
-        else:
-            analysis_results[key] = value
-    update_progress(70, "步骤 4/6：LLM分析完成。")
+    try:
+        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        for key, value in zip(tasks.keys(), results):
+            if isinstance(value, Exception):
+                logger.error(f"{key} 分析任务出错: {value}")
+                analysis_results[key] = None # 或者记录错误信息 str(value)
+            else:
+                analysis_results[key] = value
+        record_stage(current_stage_name_llm, start_time_llm_analysis, datetime.datetime.now())
+        update_progress(70, "步骤 4/6：LLM分析完成。")
+    except Exception as e:
+        logger.error(f"LLM综合分析阶段出错: {e}")
+        stage_status[current_stage_name_llm] = "失败"
+        record_stage(current_stage_name_llm, start_time_llm_analysis, datetime.datetime.now())
+        update_progress(70, "步骤 4/6：LLM分析失败。")
+
 
     # 3.5 问答生成 - 再为每个问题生成答案（单独并发）
     update_progress(75, "步骤 5/6：为每个问题生成答案...")
+    start_time_qa_answers = datetime.datetime.now()
+    current_stage_name_qa_answers = "问答对生成"
     questions = analysis_results.get("questions") or []
     if questions:
-        qa_pairs = await qa_generator.generate_answers_batch(
-            questions,
-            full_content,
-            callbacks=callbacks_list
-        )
+        try:
+            qa_pairs = await qa_generator.generate_answers_batch(
+                questions,
+                full_content,
+                callbacks=callbacks_list
+            )
+            analysis_results["qa_pairs"] = qa_pairs
+            record_stage(current_stage_name_qa_answers, start_time_qa_answers, datetime.datetime.now())
+        except Exception as e:
+            logger.error(f"批量生成答案失败: {e}")
+            analysis_results["qa_pairs"] = [{"question": q, "answer": "生成答案时出错"} for q in questions]
+            stage_status[current_stage_name_qa_answers] = "失败"
+            record_stage(current_stage_name_qa_answers, start_time_qa_answers, datetime.datetime.now())
     else:
         qa_pairs = []
-    analysis_results["qa_pairs"] = qa_pairs
+        analysis_results["qa_pairs"] = qa_pairs
+        stage_status[current_stage_name_qa_answers] = "跳过 (无问题)"
+        record_stage(current_stage_name_qa_answers, start_time_qa_answers, datetime.datetime.now())
     update_progress(80, "步骤 5/6：问答生成完成。")
 
     # 3.6 (可选) 获取参考文献和相关文章
-    # 优先使用S2 paperId获取参考文献
     s2_paper_id = s2_info.get("paperId") if s2_info else None
     pubmed_pmid = pubmed_info.get("pmid") if pubmed_info else None
 
     # 获取参考文献
+    update_progress(85, "步骤 6/6：获取参考文献...")
+    start_time_references = datetime.datetime.now()
+    current_stage_name_references = "参考文献获取"
     references_data = {
         "source_paper_id": "N/A",
         "reference_dois": [],
@@ -312,24 +357,50 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         "error": "未尝试获取参考文献。"
     }
     if s2_paper_id:
-        update_progress(85, "步骤 6/6：获取参考文献 (通过Semantic Scholar)...")
-        references_data = await metadata_fetcher.fetch_references(s2_paper_id, ncbi_email)
-        analysis_results["references_data"] = references_data
-        update_progress(90, f"步骤 6/6：获取了 {len(references_data.get('full_references_details', []))} 条参考文献。")
+        try:
+            references_data = await metadata_fetcher.fetch_references(s2_paper_id, ncbi_email)
+            analysis_results["references_data"] = references_data
+            record_stage(current_stage_name_references, start_time_references, datetime.datetime.now())
+            update_progress(90, f"步骤 6/6：获取了 {len(references_data.get('full_references_details', []))} 条参考文献。")
+        except Exception as e:
+            logger.error(f"获取参考文献失败: {e}")
+            references_data["error"] = str(e)
+            analysis_results["references_data"] = references_data
+            stage_status[current_stage_name_references] = "失败"
+            record_stage(current_stage_name_references, start_time_references, datetime.datetime.now())
+            update_progress(90, "步骤 6/6：获取参考文献失败。")
     else:
         logger.warning("跳过获取参考文献，因为主要文章的 Semantic Scholar paperId 未找到或无效。")
-        analysis_results["references_data"] = references_data # 保持默认的错误信息
+        references_data["error"] = "主要文章的 Semantic Scholar paperId 未找到或无效。"
+        analysis_results["references_data"] = references_data
+        stage_status[current_stage_name_references] = "跳过 (无S2PaperID)"
+        record_stage(current_stage_name_references, start_time_references, datetime.datetime.now())
+        update_progress(90, "步骤 6/6：跳过获取参考文献。")
+
 
     # 获取相关文章
+    update_progress(95, "步骤 6/6：获取相关文章...")
+    start_time_related_articles = datetime.datetime.now()
+    current_stage_name_related = "相关文章获取"
     related_articles_pubmed = []
     if pubmed_pmid:
-        update_progress(95, "步骤 6/6：获取相关文章 (通过PubMed)...")
-        related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_pmid, ncbi_email)
-        analysis_results["related_articles_pubmed"] = related_articles_pubmed
-        update_progress(98, f"步骤 6/6：获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
+        try:
+            related_articles_pubmed = await metadata_fetcher.fetch_related_articles(pubmed_pmid, ncbi_email)
+            analysis_results["related_articles_pubmed"] = related_articles_pubmed
+            record_stage(current_stage_name_related, start_time_related_articles, datetime.datetime.now())
+            update_progress(98, f"步骤 6/6：获取了 {len(related_articles_pubmed)} 篇PubMed相关文章。")
+        except Exception as e:
+            logger.error(f"获取相关文章失败: {e}")
+            analysis_results["related_articles_pubmed"] = []
+            stage_status[current_stage_name_related] = "失败"
+            record_stage(current_stage_name_related, start_time_related_articles, datetime.datetime.now())
+            update_progress(98, "步骤 6/6：获取相关文章失败。")
     else:
         logger.warning("跳过获取相关文章，因为主要文章的 PubMed PMID 未找到或无效。")
         analysis_results["related_articles_pubmed"] = []
+        stage_status[current_stage_name_related] = "跳过 (无PMID)"
+        record_stage(current_stage_name_related, start_time_related_articles, datetime.datetime.now())
+        update_progress(98, "步骤 6/6：跳过获取相关文章。")
 
     update_progress(100, "所有处理步骤完成。")
     token_callback_handler.log_total_usage()

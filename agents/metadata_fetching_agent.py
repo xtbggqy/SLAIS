@@ -24,7 +24,46 @@ class MetadataFetchingAgent:
             # 如果关键ID都存在，则认为缓存是完整的
             if has_pmid and has_s2_paper_id:
                 logger.info(f"使用来自数据库的DOI {doi} 的完整元数据缓存。")
-                return cached_metadata
+                # 将扁平的 cached_metadata 构造成嵌套结构返回
+                s2_info_from_cache = {
+                    "paperId": cached_metadata.get("s2_paper_id"),
+                    "title": cached_metadata.get("title"),
+                    "authors": [{"name": author.strip()} for author in cached_metadata.get("authors_str", "").split(";") if author.strip()] if cached_metadata.get("authors_str") else [],
+                    "publicationDate": cached_metadata.get("pub_date"),
+                    "journal": {"name": cached_metadata.get("journal")} if cached_metadata.get("journal") else None,
+                    "abstract": cached_metadata.get("abstract"),
+                    "citationCount": cached_metadata.get("citation_count"),
+                    "externalIds": {
+                        "DOI": cached_metadata.get("doi"),
+                        "PubMed": cached_metadata.get("pmid")
+                    }
+                }
+                # 清理 s2_info_from_cache 中的 None 或空值，使其更像真实API返回
+                s2_info_from_cache = {k: v for k, v in s2_info_from_cache.items() if v is not None and v != '' and v != [] and v != {}}
+                if "authors" in s2_info_from_cache and not s2_info_from_cache["authors"]: # 如果作者列表为空则移除
+                    del s2_info_from_cache["authors"]
+                if "journal" in s2_info_from_cache and not s2_info_from_cache["journal"]: # 如果期刊为空则移除
+                    del s2_info_from_cache["journal"]
+
+
+                pubmed_info_from_cache = {
+                    "pmid": cached_metadata.get("pmid"),
+                    "title": cached_metadata.get("title"),
+                    "authors_str": cached_metadata.get("authors_str"),
+                    "pub_date": cached_metadata.get("pub_date"),
+                    "journal": cached_metadata.get("journal"),
+                    "abstract": cached_metadata.get("abstract"),
+                    "pmid_link": cached_metadata.get("pmid_link"),
+                    "pmcid": cached_metadata.get("pmcid"),
+                    "pmcid_link": cached_metadata.get("pmcid_link"),
+                    "doi": cached_metadata.get("doi")
+                }
+                pubmed_info_from_cache = {k: v for k, v in pubmed_info_from_cache.items() if v is not None and v != ''}
+
+                return {
+                    "pubmed_info": pubmed_info_from_cache if pubmed_info_from_cache else None, # 如果字典为空则设为None
+                    "s2_info": s2_info_from_cache if s2_info_from_cache else None # 如果字典为空则设为None
+                }
             else:
                 logger.info(f"DOI {doi} 的缓存元数据不完整 (PMID: {has_pmid}, S2PaperID: {has_s2_paper_id})。尝试重新获取。")
         
