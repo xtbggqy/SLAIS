@@ -55,8 +55,9 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
   <!-- 示例：Web界面主页 -->
   <img src="docs/images/screenshot_main.png" alt="SLAIS Web Interface - Main Page" width="70%"/>
   <p><em>图1：SLAIS Web应用主界面 (Placeholder: Main interface of the SLAIS Web App)</em></p>
+</div>
 
-[生成的分析报告示例](output/darwin/darwin_analysis.md)
+
 
 
 ## 🚀 快速开始
@@ -84,6 +85,8 @@ cp .env.example .env
 # 4. 启动Web界面
 python -m streamlit run web/web_app.py
 ```
+
+[生成的分析报告示例](output/darwin/darwin_analysis.md)
 
 ### 命令行使用
 
