@@ -1,38 +1,10 @@
----
-
-# 详细文档见https://modelscope.cn/docs/%E5%88%9B%E7%A9%BA%E9%97%B4%E5%8D%A1%E7%89%87
-
-domain: #领域：cv/nlp/audio/multi-modal/AutoML
-
-# - cv
-
-tags: #自定义标签
-
-datasets: #关联数据集
- evaluation:
- #- iic/ICDAR13_HCTR_Dataset
- test:
- #- iic/MTWI
- train:
- #- iic/SIBR
-models: #关联模型
-#- iic/ofa_ocr-recognition_general_base_zh
-
-## 启动文件(若SDK为Gradio/Streamlit，默认为app.py, 若为Static HTML, 默认为index.html)
-
-# deployspec:
-
-# entry_file: app.py
-
-license: Apache License 2.0
-
----
-
 # SLAIS - PDF文献智能分析与洞察系统
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://python.org)
+<img src="logo.svg" alt="SLAIS Logo" width="150"/>
+
+[![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)]()
 
@@ -78,11 +50,20 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
 - **命令行工具**：强大的CLI支持，适合批量处理和自动化工作流
 - **实时反馈**：详细的进度跟踪、日志输出、错误提示
 
+## 🖼️ 应用截图 (Application Screenshots)
+<div align="center">
+  <!-- 示例：Web界面主页 -->
+  <img src="docs/images/screenshot_main.png" alt="SLAIS Web Interface - Main Page" width="70%"/>
+  <p><em>图1：SLAIS Web应用主界面 (Placeholder: Main interface of the SLAIS Web App)</em></p>
+
+[生成的分析报告示例](output/darwin/darwin_analysis.md)
+
+
 ## 🚀 快速开始
 
 ### 环境要求
 
-- Python 3.9+
+- Python 3.10
 - 8GB+ RAM（推荐16GB）
 - 网络连接（用于API调用）
 
@@ -90,8 +71,8 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
 
 ```bash
 # 1. 克隆项目
-git clone <repository-url>
-cd one_article
+git clone https://github.com/xtbggqy/SLAIS.git
+cd SLAIS
 
 # 2. 安装依赖
 pip install -r requirements.txt
@@ -131,7 +112,7 @@ pip install -r requirements.txt
 
 ```bash
 # 创建conda环境
-conda create -n slais python=3.9
+conda create -n slais python=3.10
 conda activate slais
 
 # 安装依赖
@@ -258,86 +239,37 @@ graph TD
     H --> I[输出文件]
 ```
 
-## 🛠️ 开发指南
 
-### 开发环境搭建
 
-```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd one_article
+## 🗺️ 路线图 (Roadmap)
 
-# 2. 创建开发环境
-python -m venv dev_env
-source dev_env/bin/activate  # Windows: dev_env\Scripts\activate
+我们对SLAIS的未来发展充满期待，并计划在以下方面进行增强和扩展：
 
-# 3. 安装开发依赖
-pip install -r requirements-dev.txt
+- **[ ] 更广泛的文献数据库集成**：除了PubMed和Semantic Scholar，计划支持更多学术数据库（如ArXiv、Crossref等）。
+- **[ ] 交互式图表与可视化**：在Web报告中引入交互式图表，更直观地展示分析结果。
+- **[ ] 批量处理增强**：完善命令行工具的批量处理功能，支持更复杂的自动化工作流。
+- **[ ] 知识图谱构建**：探索从分析文献中自动构建小型知识图谱的可行性。
+- **[ ] 多语言支持**：初步支持对非英文文献的分析。
+- **[ ] 用户账户与个性化设置**：为Web应用添加用户系统，允许保存偏好和历史记录。
+- **[ ] 插件化架构**：使分析模块更加插件化，方便社区贡献和扩展。
 
-# 4. 安装pre-commit
-pre-commit install
+*我们欢迎社区成员就未来方向提出建议和功能请求。您可以通过项目的Issue跟踪器分享您的想法。*
 
-# 5. 运行测试
-pytest tests/
-```
 
-### 代码规范
-
-- **风格指南**：遵循PEP 8 Python代码风格，并参考项目 `.clinerules/global_rules.md` 中定义的规范。
-- **类型注解**：使用类型提示提高代码可读性。
-- **文档字符串**：所有公共函数/类必须包含符合规范的中文docstring，说明功能、参数和返回值。
-- **测试覆盖**：新功能必须包含相应的单元测试。
-
-### 提交指南
-
-```bash
-# 1. 创建功能分支
-git checkout -b feature/new-feature
-
-# 2. 进行开发和测试
-# ... 编写代码 ...
-
-# 3. 运行测试和检查
-pytest tests/
-flake8 .
-black .
-
-# 4. 提交代码
-git add .
-git commit -m "feat: add new feature"
-
-# 5. 推送并创建PR
-git push origin feature/new-feature
-```
-
-### 扩展开发
-
-#### 添加新的LLM提供商
-
-1. 在`slais/llm_clients.py`中添加新的客户端类
-2. 更新`agents/llm_clients.py`中的映射表
-3. 在配置文件中添加相应的环境变量
-
-#### 添加新的分析模块
-
-1. 继承`agents/base_agent.py`中的`BaseAgent`类
-2. 实现`analyze`方法
-3. 在`agents/prompts.py`中添加相应的提示模板
-4. 在主流程中集成新模块
-
+<!--
 ## 📊 性能与优化
 
 ### 性能指标
 
 - **处理速度**：单篇文献分析时间约3-5分钟
 - **内存使用**：峰值内存约2-4GB
-- **Token消耗**：每篇文献约5000-10000 tokens
+- **Token消耗**：每篇文献约5000-10000 tokens 
 
 ### 优化建议
 
 - **缓存机制**：已实现API响应缓存（针对元数据、参考文献、相关文章），并优化了缓存处理逻辑，有效减少重复API调用。
 - **并发处理**：适当调整并发参数，平衡速度与资源消耗。
-- **内容截断**：合理设置`MAX_CONTENT_CHARS_FOR_LLM`参数。
+- **内容截断**：合理设置`MAX_CONTENT_CHARS_FOR_LLM`参数。-->
 
 ## 🧪 测试
 
@@ -399,17 +331,6 @@ tests/
 
 本项目采用MIT许可证。详细信息请查看[LICENSE](LICENSE)文件。
 
-## 🔗 相关链接
-
-- **项目主页**：[GitHub Repository](https://github.com/your-org/slais)
-- **问题跟踪**：[GitHub Issues](https://github.com/your-org/slais/issues)
-- **更新日志**：[CHANGELOG.md](CHANGELOG.md)
-- **开发文档**：[project.md](project.md)
-
-## 👥 维护者
-
-- **主要维护者**：[@your-username](https://github.com/your-username)
-- **贡献者**：查看[Contributors](https://github.com/your-org/slais/contributors)
 
 ## 🙏 致谢
 

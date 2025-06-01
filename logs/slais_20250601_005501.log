@@ -1,0 +1,8 @@
+2025-06-01 00:55:08,244 - slais_app - INFO - 模块加载时配置检查：
+2025-06-01 00:55:08,245 - slais_app - INFO - ARTICLE_DOI: 10.1126/science.aao4593
+2025-06-01 00:55:08,245 - slais_app - INFO - SEMANTIC_SCHOLAR_API_BATCH_SIZE: 25
+2025-06-01 00:55:08,246 - slais_app - INFO - MAX_QUESTIONS_TO_GENERATE: 25
+2025-06-01 00:55:08,246 - slais_app - INFO - 默认进入Web UI模式或由Streamlit直接执行。
+2025-06-01 00:55:08,627 - slais_app - INFO - 脚本未在Streamlit环境中运行。尝试通过subprocess启动Streamlit。
+2025-06-01 00:55:08,627 - slais_app - INFO - 执行: C:\Users\gqy17\miniforge3\envs\one_article\python.exe -m streamlit run D:\C\Documents\Program\Python_file\article\one_article\app.py
+2025-06-01 00:58:10,110 - slais_app - ERROR - 运行streamlit失败: Command '['C:\\Users\\gqy17\\miniforge3\\envs\\one_article\\python.exe', '-m', 'streamlit', 'run', 'D:\\C\\Documents\\Program\\Python_file\\article\\one_article\\app.py']' returned non-zero exit status 3221225786.
