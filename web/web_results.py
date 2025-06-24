@@ -10,6 +10,7 @@ from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT, TA_CENTER, TA_RIGHT
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from io import BytesIO
+import pandas as pd
 
 from app import save_report
 from web.web_ui import get_log_file_path
@@ -98,42 +99,159 @@ def display_results():
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .slais-stage-table th, .slais-stage-table td {
   border: 1px solid #444;
-  padding: 8px 10px;
-  text-align: center;
+  padding: 12px 15px;
+  text-align: left;
   background: #181818;
   color: #eee;
-  font-size: 16px;
+  font-size: 14px;
 }
 .slais-stage-table th {
-  background: #222;
+  background: #2c3e50;
   color: #fff;
   font-weight: bold;
+  text-align: center;
+}
+.slais-stage-table .stage-number {
+  font-weight: bold;
+  color: #3498db;
+  text-align: center;
+  width: 60px;
+}
+.slais-stage-table .stage-description {
+  font-size: 12px;
+  color: #bdc3c7;
+  font-style: italic;
+}
+.slais-stage-table .status-success {
+  color: #27ae60;
+  font-weight: bold;
+}
+.slais-stage-table .status-failed {
+  color: #e74c3c;
+  font-weight: bold;
+}
+.slais-stage-table .status-skipped {
+  color: #f39c12;
+  font-weight: bold;
+}
+.slais-performance-summary {
+  background: #2c3e50;
+  color: #ecf0f1;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+.slais-performance-summary h4 {
+  margin: 0 0 10px 0;
+  color: #3498db;
+}
+.slais-performance-summary .metric {
+  display: inline-block;
+  margin-right: 20px;
+  padding: 5px 10px;
+  background: #34495e;
+  border-radius: 4px;
+  margin-bottom: 5px;
 }
 @media (prefers-color-scheme: light) {
-  .slais-stage-table th { background: #f5f5f5; color: #222; }
-  .slais-stage-table td { background: #fff; color: #222; }
+  .slais-stage-table th { background: #34495e; color: #fff; }
+  .slais-stage-table td { background: #fff; color: #2c3e50; border-color: #bdc3c7; }
+  .slais-stage-table .stage-number { color: #2980b9; }
+  .slais-stage-table .stage-description { color: #7f8c8d; }
+  .slais-performance-summary { background: #ecf0f1; color: #2c3e50; }
+  .slais-performance-summary h4 { color: #2980b9; }
+  .slais-performance-summary .metric { background: #d5dbdb; color: #2c3e50; }
 }
 </style>
 """, unsafe_allow_html=True)
-        st.markdown("### 各阶段完成时间与耗时")
-        # 合并所有阶段的键，确保显示所有阶段
-        all_stages = set(stage_times.keys()) | set(stage_status.keys()) | set(stage_costs.keys())
-        if all_stages:
-            st.markdown(
-                "<table class='slais-stage-table'>"
-                "<thead><tr><th>阶段</th><th>完成时间</th><th>耗时（秒）</th><th>状态</th></tr></thead><tbody>"
-                + "".join(
-                    f"<tr><td>{k}</td><td>{stage_times.get(k, '未完成')}</td><td>{stage_costs.get(k, 0.0):.2f}</td><td>{stage_status.get(k, '未开始')}</td></tr>"
-                    for k in sorted(all_stages)
-                )
-                + "</tbody></table>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.info("未获取到阶段时间信息。")
+        
+        st.markdown("### 📊 SLAIS 文献分析流程时间统计")
+        
+        # 定义流程顺序和描述
+        stage_order = [
+            ("PDF内容解析", "使用MinerU API解析PDF结构和内容"),
+            ("图片内容分析", "检测和分析PDF中的图片内容"),
+            ("元数据获取", "从PubMed和Semantic Scholar获取文献元数据"),
+            ("LLM初步分析", "使用大语言模型进行文献内容分析"),
+            ("问答对生成", "基于文献内容生成问答对"),
+            ("参考文献获取", "获取文献的参考文献列表"),
+            ("相关文章获取", "搜索和获取相关研究文章"),
+            ("深度文献分析", "进行深度的文献分析和洞察提取")
+        ]
+        
+        # 计算性能统计
+        total_time = sum(stage_costs.values())
+        completed_stages = sum(1 for status in stage_status.values() if status == "完成")
+        failed_stages = sum(1 for status in stage_status.values() if "失败" in status)
+        skipped_stages = sum(1 for status in stage_status.values() if "跳过" in status)
+        avg_time = total_time / len(stage_order) if stage_order else 0
+        slowest_stage = max(stage_costs.items(), key=lambda x: x[1]) if stage_costs else ("-", 0)
+        fastest_stage = min(stage_costs.items(), key=lambda x: x[1] if x[1] > 0 else float('inf')) if stage_costs else ("-", 0)
+
+        # 性能统计卡片
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1.metric("总耗时", f"{total_time:.1f}秒")
+        col2.metric("完成阶段", f"{completed_stages}/{len(stage_order)}")
+        col3.metric("失败阶段", f"{failed_stages}")
+        col4.metric("跳过阶段", f"{skipped_stages}")
+        col5.metric("平均每阶段", f"{avg_time:.1f}秒")
+        col6.metric("最慢阶段", f"{slowest_stage[0]} ({slowest_stage[1]:.1f}秒)")
+
+        # 构建DataFrame用于展示
+        def status_icon(status):
+            if status == "完成":
+                return "✅ 完成"
+            elif "失败" in status:
+                return "❌ 失败"
+            elif "跳过" in status:
+                return "⚠️ 跳过"
+            else:
+                return status
+        def format_stage(row):
+            return f"**{row['阶段名称']}**\n<span style='color:gray;font-size:12px'>{row['说明']}</span>"
+        table_data = []
+        for i, (stage_name, description) in enumerate(stage_order, 1):
+            completion_time = stage_times.get(stage_name, "--")
+            duration = stage_costs.get(stage_name, 0.0)
+            status = stage_status.get(stage_name, "未开始")
+            duration_str = f"{duration:.2f}" if duration < 1 else f"{duration:.1f}"
+            table_data.append({
+                "序号": i,
+                "阶段名称": stage_name,
+                "说明": description,
+                "完成时间": completion_time,
+                "耗时(秒)": duration_str,
+                "状态": status_icon(status)
+            })
+        df = pd.DataFrame(table_data)
+        # 阶段说明合并显示
+        df["阶段"] = df.apply(lambda row: f"**{row['阶段名称']}**<br/><span style='color:gray;font-size:12px'>{row['说明']}</span>", axis=1)
+        df_show = df[["序号", "阶段", "完成时间", "耗时(秒)", "状态"]]
+        st.markdown("#### 各阶段详细耗时表")
+        st.write(df_show.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+        # 性能建议
+        if total_time > 0:
+            st.markdown("### 💡 性能优化建议")
+            suggestions = []
+            if stage_costs.get("问答对生成", 0) > 60:
+                suggestions.append("• **问答对生成**耗时较长，可考虑减少生成问题数量或优化模型选择")
+            if stage_costs.get("LLM初步分析", 0) > 50:
+                suggestions.append("• **LLM初步分析**可通过分段处理或选择更快的模型来优化")
+            if stage_costs.get("深度文献分析", 0) > 50:
+                suggestions.append("• **深度文献分析**可通过缓存机制减少重复计算")
+            if stage_costs.get("参考文献获取", 0) < 2 and stage_costs.get("相关文章获取", 0) < 10:
+                suggestions.append("• **参考文献**和**相关文章获取**可以并行执行以提升效率")
+            if failed_stages > 0:
+                suggestions.append("• 存在失败阶段，建议检查网络连接和API配置")
+            if not suggestions:
+                suggestions.append("• 当前性能表现良好，无需特别优化")
+            for suggestion in suggestions:
+                st.markdown(suggestion)
 
         if results:
             result_placeholder = st.empty()

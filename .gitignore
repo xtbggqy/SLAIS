@@ -80,6 +80,7 @@ target/
 # IPython
 profile_default/
 ipython_config.py
+cache/
 
 # Environments
 .env
