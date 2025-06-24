@@ -17,19 +17,25 @@ dotenv_path = project_root / '.env'
 # 检查是否是帮助模式，如果是则跳过调试输出
 is_help_mode = '--help' in sys.argv or '-h' in sys.argv
 
+# 日志导入
+try:
+    from slais.utils.logging_utils import logger
+except Exception:
+    logger = None  # 防止循环依赖
+
 # 显式打印调试信息（仅在非帮助模式下）
-if not is_help_mode:
-    print(f"DEBUG: 尝试从 {dotenv_path} 加载环境变量")
+if not is_help_mode and logger:
+    logger.debug(f"尝试从 {dotenv_path} 加载环境变量")
 
 # 确保.env文件存在
 if dotenv_path.exists():
     # 重新加载并强制覆盖现有环境变量
     load_dotenv(dotenv_path=dotenv_path, override=True)
-    if not is_help_mode:
-        print(f"DEBUG: 成功加载 .env 文件")
+    if not is_help_mode and logger:
+        logger.debug(f"成功加载 .env 文件")
 else:
-    if not is_help_mode:
-        print(f"警告: .env 文件未找到: {dotenv_path}")
+    if not is_help_mode and logger:
+        logger.warning(f".env 文件未找到: {dotenv_path}")
 
 # 重置系统路径以避免潜在冲突
 sys.path = original_sys_path
@@ -50,17 +56,23 @@ class Settings(BaseSettings):
     # API Keys
     OPENAI_API_KEY: str = Field("", description="API key for OpenAI or compatible API")
     DASHSCOPE_API_KEY: str = Field("", description="API key for DashScope (优先于OPENAI_API_KEY)")
+    GEMINI_API_KEY: str = Field("", description="API key for Google Gemini")
+    XAI_API_KEY: str = Field("", description="API key for xAI Grok")
+    DEEPSEEK_API_KEY: str = Field("", description="API key for DeepSeek")
+    OPENROUTER_API_KEY: str = Field("", description="API key for OpenRouter")
     MINERU_API_KEY: str = Field("", description="API key for MinerU API service")
 
+    # API Base URLs
+    OPENAI_API_BASE_URL: Optional[str] = Field("https://api.openai.com/v1", description="Base URL for OpenAI or compatible API (optional)")
+    IMAGE_LLM_API_BASE_URL: str = Field("", description="Base URL for Image LLM")
+    
     # Model Configuration
     OPENAI_API_MODEL: str = Field("gpt-4", description="Model name for OpenAI or compatible API")
-    OPENAI_API_BASE_URL: Optional[str] = Field("https://api.openai.com/v1", description="Base URL for OpenAI or compatible API (optional)")
     OPENAI_TEMPERATURE: float = Field(0.0, description="Temperature for OpenAI or compatible API")
 
     # 图像 LLM 配置
     IMAGE_LLM_API_KEY: str = Field("", description="API key for Image LLM")
     IMAGE_LLM_API_MODEL: str = Field("qwen-vl-plus", description="Model name for Image LLM")
-    IMAGE_LLM_API_BASE_URL: str = Field("", description="Base URL for Image LLM")
     IMAGE_LLM_TEMPERATURE: float = Field(0.1, description="Temperature for Image LLM")
 
     # NCBI Configuration
@@ -120,11 +132,63 @@ class Settings(BaseSettings):
     # Logging Configuration
     LOG_LEVEL: str = Field("INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)")
     LOG_DIR: str = Field("logs", description="Directory for log files")
+    LOG_FILE: str = Field("", description="Path to the log file. If empty, it will be generated automatically.")
 
     # Analysis Configuration
     MAX_PAGES_TO_SCAN_FOR_DOI: int = Field(5, description="Maximum pages to scan for DOI in PDF")
     MAX_QUESTIONS_TO_GENERATE: int = Field(int(os.getenv("MAX_QUESTIONS_TO_GENERATE", 30)), ge=1, description="Maximum number of Q&A pairs to generate")
     MAX_CONTENT_CHARS_FOR_LLM: int = Field(15000, ge=1000, description="Maximum content characters to pass to LLM for analysis tasks")
+
+    # --- 新增：默认API服务商 ---
+    DEFAULT_API_PROVIDER: str = Field("阿里云", description="Default API provider selected in the UI")
+
+    # --- 新增：各平台默认模型配置 ---
+    # 从 .env 文件读取各平台的默认模型
+    DEFAULT_OPENAI_TEXT_MODEL: str = Field("gpt-4o", description="Default text model for OpenAI")
+    DEFAULT_OPENAI_IMAGE_MODEL: str = Field("gpt-4o", description="Default image model for OpenAI")
+    DEFAULT_ALIYUN_TEXT_MODEL: str = Field("qwen-plus", description="Default text model for Aliyun")
+    DEFAULT_ALIYUN_IMAGE_MODEL: str = Field("qwen-vl-plus", description="Default image model for Aliyun")
+    DEFAULT_GEMINI_TEXT_MODEL: str = Field("gemini-1.5-pro-latest", description="Default text model for Gemini")
+    DEFAULT_GEMINI_IMAGE_MODEL: str = Field("gemini-pro-vision", description="Default image model for Gemini")
+    DEFAULT_XAI_TEXT_MODEL: str = Field("grok-3", description="Default text model for xAI")
+    DEFAULT_XAI_IMAGE_MODEL: str = Field("grok-2-vision-1212", description="Default image model for xAI")
+    DEFAULT_DEEPSEEK_TEXT_MODEL: str = Field("deepseek-chat", description="Default text model for DeepSeek")
+    DEFAULT_OPENROUTER_TEXT_MODEL: str = Field("openrouter-auto", description="Default text model for OpenRouter")
+
+    # --- 新增：用于UI的默认模型映射 ---
+    DEFAULT_TEXT_MODEL_FOR_API: Dict[str, str] = Field(default_factory=dict, description="Mapping of API provider to default text model")
+    DEFAULT_IMAGE_MODEL_FOR_API: Dict[str, str] = Field(default_factory=dict, description="Mapping of API provider to default image model")
+
+    # --- 新增：统一的API服务商配置 ---
+    API_PROVIDER_CONFIGS: Dict[str, Dict[str, Any]] = Field(
+        default_factory=lambda: {
+            "阿里云": {
+                "api_key": os.getenv("DASHSCOPE_API_KEY"),
+                "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            },
+            "OpenAI": {
+                "api_key": os.getenv("OPENAI_API_KEY"),
+                "base_url": os.getenv("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
+            },
+            "Gemini": {
+                "api_key": os.getenv("GEMINI_API_KEY"),
+                "base_url": "https://generativelanguage.googleapis.com/v1beta", # 示例URL，请根据实际情况修改
+            },
+            "xAI": {
+                "api_key": os.getenv("XAI_API_KEY"),
+                "base_url": "https://api.x.ai/v1", # 示例URL
+            },
+            "DeepSeek": {
+                "api_key": os.getenv("DEEPSEEK_API_KEY"),
+                "base_url": "https://api.deepseek.com/v1",
+            },
+            "OpenRouter": {
+                "api_key": os.getenv("OPENROUTER_API_KEY"),
+                "base_url": "https://openrouter.ai/api/v1",
+            },
+        },
+        description="Unified configuration for different API providers."
+    )
 
     # LLM 模型选择配置 (从 web/config.txt 迁移过来，并更新为最新模型)
     LLM_MODEL_CHOICES: Dict[str, List[str]] = Field(
@@ -135,88 +199,73 @@ class Settings(BaseSettings):
                 "o3", "o4-mini", "dall-e-3" # DALL-E 3 是图像生成模型
             ],
             "阿里云": [
-                "qwen-turbo", "qwen-plus", "qwen-max", "qwen3", "qwen2.5-omni",
-                "qwen2.5-vl", "qwen-vl-plus", "qwen-vl-max", "qwen-72b-chat",
-                "qwen-14b-chat", "qwen-7b-chat", "qwen-max-longcontext",
-                "qwen-2-72b-instruct", "qwen2.5-72b", "qwen2.5-max", "qwen2.5-turbo"
+                "qwen-max", "qwen-plus", "qwen-turbo", "qwen-max-longcontext",
+                "qwen-72b-chat", "qwen-14b-chat", "qwen-7b-chat"
             ],
             "Gemini": [
-                "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro-latest",
-                "gemini-1.5-flash-latest", "gemini-1.5-pro-002", "gemini-1.5-flash-002",
-                "gemini-pro", "gemini-pro-vision", "gemini-1.0-pro"
+                "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite-preview-06-17"
             ],
             "xAI": [
                 "grok-3", "grok-3-mini", "grok-2", "grok-2-mini", "grok-2-vision-1212",
                 "grok-1.5", "grok-1"
             ],
             "DeepSeek": [
-                "deepseek-r1-0528", "deepseek-v3-0324", "deepseek-chat", "deepseek-r1",
-                "deepseek-r1:latest", "deepseek-r1:8b", "deepseek-r1:7b", "deepseek-r1:1.5b"
+                "deepseek-chat"
             ],
             "OpenRouter": [
-                "openrouter-auto", "anthropic/claude-3-opus-20240229",
-                "anthropic/claude-3-sonnet-20240229", "anthropic/claude-3-haiku-20240307",
-                "anthropic/claude-3.5-sonnet-20240620", "meta-llama/llama-3.1-70b-instruct",
-                "meta-llama/llama-3.1-8b-instruct", "mistralai/mistral-large-2402",
-                "mistralai/mistral-7b-instruct-v0.2", "cohere/command-r-plus-04-2024",
-                "xai/grok-2-latest", "deepseek-coder-v2.5"
+                "moonshotai/kimi-dev-72b:free" 
             ]
         },
-        description="Available LLM models grouped by API interface"
-    )
-    
-    # 从 .env 中获取默认文本模型信息
-    DEFAULT_TEXT_MODEL_FOR_API: Dict[str, str] = Field(
-        {
-            "OpenAI": os.getenv("DEFAULT_OPENAI_TEXT_MODEL", "gpt-4o"),
-            "Gemini": os.getenv("DEFAULT_GEMINI_TEXT_MODEL", "gemini-1.5-pro-latest"),
-            "xAI": os.getenv("DEFAULT_XAI_TEXT_MODEL", "grok-3"),
-            "阿里云": os.getenv("DEFAULT_ALIYUN_TEXT_MODEL", "qwen-turbo"),
-            "DeepSeek": os.getenv("DEFAULT_DEEPSEEK_TEXT_MODEL", "deepseek-chat"),
-            "OpenRouter": os.getenv("DEFAULT_OPENROUTER_TEXT_MODEL", "openrouter-auto")
-        },
-        description="Default text model for each API interface, configurable via .env"
-    )
-    
-    # 从 .env 中获取默认图像模型信息
-    DEFAULT_IMAGE_MODEL_FOR_API: Dict[str, str] = Field(
-        {
-            "OpenAI": os.getenv("DEFAULT_OPENAI_IMAGE_MODEL", "gpt-4o"),
-            "阿里云": os.getenv("DEFAULT_ALIYUN_IMAGE_MODEL", "qwen-vl-plus"),
-            "Gemini": os.getenv("DEFAULT_GEMINI_IMAGE_MODEL", "gemini-pro-vision"),
-            "xAI": os.getenv("DEFAULT_XAI_IMAGE_MODEL", "grok-2-vision-1212")
-        },
-        description="Default image model for each API interface, configurable via .env"
+        description="Configuration for LLM model choices for the UI dropdown."
     )
 
-    # markdown子目录名，可在.env中配置，未配置时自动为 <pdf_stem>_markdown
-    MARKDOWN_SUBDIR: str = ""
-
-    # Derived configurations (like LOG_FILE) can be defined as properties or methods if needed
-    @property
-    def LOG_FILE(self) -> str:
-        return os.path.join(self.LOG_DIR, f"slais_{CURRENT_TIMESTAMP}.log")
+    # --- 新增：图像LLM模型选择配置 ---
+    IMAGE_MODEL_CHOICES: Dict[str, List[str]] = Field(
+        default_factory=lambda: {
+            "OpenAI": ["gpt-4o", "gpt-4-turbo"],
+            "阿里云": ["qwen-vl-max", "qwen-vl-plus"],
+            "Gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite-preview-06-17", "gemini-1.5-pro-latest", "gemini-1.5-flash-latest"],
+            "xAI": ["grok-2-vision-1212"],
+            "DeepSeek": [],
+            "OpenRouter": ["qwen/qwen2.5-vl-32b-instruct:free", "mistralai/mistral-small-3.2-24b-instruct:free", "meta-llama/llama-4-maverick:free", "meta-llama/llama-4-scout:free"],
+        },
+        description="Configuration for Image LLM model choices for the UI dropdown."
+    )
 
     def model_post_init(self, __context: Any) -> None:
-        """Ensure directories exist after settings are loaded."""
-        directories = [
-            self.PDF_INPUT_DIR,
-            self.OUTPUT_BASE_DIR,
-            self.CACHE_DIR,
-            self.LOG_DIR,
-            os.path.dirname(self.LOG_FILE), # Ensure log file directory exists
-        ]
-        for directory in directories:
-            Path(directory).mkdir(parents=True, exist_ok=True)
+        """
+        Populates the default model mappings after the settings are loaded.
+        """
+        super().model_post_init(__context)
+        self.DEFAULT_TEXT_MODEL_FOR_API = {
+            "OpenAI": self.DEFAULT_OPENAI_TEXT_MODEL,
+            "阿里云": self.DEFAULT_ALIYUN_TEXT_MODEL,
+            "Gemini": self.DEFAULT_GEMINI_TEXT_MODEL,
+            "xAI": self.DEFAULT_XAI_TEXT_MODEL,
+            "DeepSeek": self.DEFAULT_DEEPSEEK_TEXT_MODEL,
+            "OpenRouter": self.DEFAULT_OPENROUTER_TEXT_MODEL,
+        }
+        self.DEFAULT_IMAGE_MODEL_FOR_API = {
+            "OpenAI": self.DEFAULT_OPENAI_IMAGE_MODEL,
+            "阿里云": self.DEFAULT_ALIYUN_IMAGE_MODEL,
+            "Gemini": self.DEFAULT_GEMINI_IMAGE_MODEL,
+            "xAI": self.DEFAULT_XAI_IMAGE_MODEL,
+        }
 
 # Create a global settings instance
 settings = Settings(_env_file=".env", _env_file_encoding="utf-8")
 
+# 动态生成日志文件名
+if not settings.LOG_FILE:
+    log_dir = Path(settings.LOG_DIR)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    settings.LOG_FILE = str(log_dir / f"slais_{CURRENT_TIMESTAMP}.log")
+
 # 添加关键配置的调试输出（仅在非帮助模式下）
-if not is_help_mode:
-    print(f"DEBUG: 配置加载完成，S2批处理大小: {settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
-    print(f"DEBUG: 从环境变量加载的DOI: {settings.ARTICLE_DOI}")
-    print(f"DEBUG: 最大问题生成数量: {settings.MAX_QUESTIONS_TO_GENERATE}")
+if not is_help_mode and logger:
+    logger.debug(f"配置加载完成，S2批处理大小: {settings.SEMANTIC_SCHOLAR_API_BATCH_SIZE}")
+    logger.debug(f"从环境变量加载的DOI: {settings.ARTICLE_DOI}")
+    logger.debug(f"最大问题生成数量: {settings.MAX_QUESTIONS_TO_GENERATE}")
 
 # 导出常用变量供直接导入
 MINERU_API_KEY = settings.MINERU_API_KEY
@@ -278,3 +327,7 @@ LOG_FILE = settings.LOG_FILE
 MAX_PAGES_TO_SCAN_FOR_DOI = settings.MAX_PAGES_TO_SCAN_FOR_DOI
 MAX_QUESTIONS_TO_GENERATE = settings.MAX_QUESTIONS_TO_GENERATE
 MAX_CONTENT_CHARS_FOR_LLM = settings.MAX_CONTENT_CHARS_FOR_LLM
+
+# --- 新增：导出新的配置 ---
+API_PROVIDER_CONFIGS = settings.API_PROVIDER_CONFIGS
+DEFAULT_API_PROVIDER = settings.DEFAULT_API_PROVIDER

@@ -54,13 +54,13 @@ def run_slais_web_ui():
         st.header("参数设置")
         
         # API接口选择
-        api_choices = list(config.settings.LLM_MODEL_CHOICES.keys())
+        api_choices = list(config.settings.API_PROVIDER_CONFIGS.keys())
         if not api_choices:
             api_choices = ["OpenAI"] # 默认选项，以防配置为空
-            st.warning("LLM模型配置为空，请检查 slais/config.py 或 .env 文件。")
+            st.warning("API服务商配置为空，请检查 slais/config.py 或 .env 文件。")
 
         # 尝试根据配置中的默认API设置默认索引
-        default_api_name = config.settings.DEFAULT_TEXT_MODEL_FOR_API.get("OpenAI", "OpenAI") # 假设OpenAI是默认API
+        default_api_name = config.settings.DEFAULT_API_PROVIDER
         try:
             default_api_index = api_choices.index(default_api_name)
         except ValueError:
@@ -71,8 +71,9 @@ def run_slais_web_ui():
         # 文本大模型选择
         text_model_choices = config.settings.LLM_MODEL_CHOICES.get(selected_api, [])
         if not text_model_choices:
-            text_model_choices = [config.settings.OPENAI_API_MODEL] # 回退到 .env 中的默认文本模型
-            st.warning(f"API接口 '{selected_api}' 未配置文本模型，使用默认值 '{config.settings.OPENAI_API_MODEL}'。")
+            fallback_text_model = config.settings.DEFAULT_TEXT_MODEL_FOR_API.get(selected_api, "default-text-model")
+            text_model_choices = [fallback_text_model]
+            st.warning(f"API接口 '{selected_api}' 未配置文本模型，使用默认值 '{fallback_text_model}'。")
         
         # 尝试设置默认选中的文本模型
         default_text_model = config.settings.DEFAULT_TEXT_MODEL_FOR_API.get(selected_api, text_model_choices[0] if text_model_choices else "default-model")
@@ -83,20 +84,27 @@ def run_slais_web_ui():
         
         text_model = st.selectbox("文本大模型", options=text_model_choices, index=default_text_model_index, help="选择用于文本分析的模型。不同的模型可能在处理速度和分析深度上有所不同。")
 
-        # 图像模型选择
-        image_model_choices = config.settings.LLM_MODEL_CHOICES.get(selected_api, [])
-        if not image_model_choices:
-            image_model_choices = [config.settings.IMAGE_LLM_API_MODEL] # 回退到 .env 中的默认图像模型
-            st.warning(f"API接口 '{selected_api}' 未配置图像模型，使用默认值 '{config.settings.IMAGE_LLM_API_MODEL}'。")
+        # 图像模型选择 (使用新的 IMAGE_MODEL_CHOICES)
+        image_model_choices = config.settings.IMAGE_MODEL_CHOICES.get(selected_api, [])
         
         # 尝试设置默认选中的图像模型
-        default_image_model = config.settings.DEFAULT_IMAGE_MODEL_FOR_API.get(selected_api, image_model_choices[0] if image_model_choices else "default-image-model")
-        try:
-            default_image_model_index = image_model_choices.index(default_image_model)
-        except ValueError:
-            default_image_model_index = 0 # 如果默认模型不在列表中，选择第一个
-        
-        image_model = st.selectbox("图像大模型", options=image_model_choices, index=default_image_model_index, help="选择用于图片内容分析的模型。确保选择支持图像处理的模型。")
+        default_image_model = config.settings.DEFAULT_IMAGE_MODEL_FOR_API.get(selected_api)
+
+        # 只有在有可选模型时才显示下拉框
+        if image_model_choices:
+            try:
+                # 如果默认模型不在选项中，则选择第一个作为默认
+                if default_image_model not in image_model_choices:
+                    default_image_model_index = 0
+                else:
+                    default_image_model_index = image_model_choices.index(default_image_model)
+            except (ValueError, TypeError):
+                default_image_model_index = 0
+            
+            image_model = st.selectbox("图像大模型", options=image_model_choices, index=default_image_model_index, help="选择用于图片内容分析的模型。确保选择支持图像处理的模型。")
+        else:
+            image_model = None
+            st.info(f"当前API接口 '{selected_api}' 无可用图像模型。")
 
         article_doi = st.text_input("文章DOI", value=config.settings.ARTICLE_DOI or "", help="输入文章的数字对象标识符(DOI)，用于获取文章的元数据和相关文献。")
         ncbi_email = st.text_input("NCBI邮箱", value=config.settings.NCBI_EMAIL or "", help="输入您的NCBI邮箱，用于访问PubMed数据库获取相关文献信息。")

@@ -12,6 +12,7 @@ pydantic-settings>=2.0.0
 # 语言模型和AI相关
 langchain>=0.1.0
 langchain-openai>=0.1.0
+langchain-google-genai>=0.1.0
 langchain-community>=0.0.38
 openai>=1.0.0
 

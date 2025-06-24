@@ -1,7 +1,6 @@
 # SLAIS - PDF文献智能分析与洞察系统
 
 <div align="center">
-
 <img src="logo.svg" alt="SLAIS Logo" width="150"/>
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://python.org)
@@ -10,7 +9,7 @@
 
 **高效、结构化的PDF学术文献分析与报告生成工具**
 
-[功能特点](#功能特点) • [快速开始](#快速开始) • [安装指南](#安装指南) • [使用文档](#使用文档) • [开发指南](#开发指南)
+[功能特点](#功能特点) • [快速开始](#快速开始) • [安装指南](#安装指南) • [使用文档](#使用文档) • [ 开发指南](#开发指南)
 
 </div>
 
@@ -18,11 +17,14 @@
 
 ## 📖 项目简介
 
-SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能的PDF文献智能分析系统，专为科研人员、学生和学术从业者设计。系统能够自动化地从PDF格式的学术文献中提取关键信息、生成深刻洞察并构建结构化报告，大幅提升文献阅读和研究效率。
+SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能的PDF文献智能分析系统，专为
+为科研人员、学生和学术从业者设计。系统能够自动化地从PDF格式的学术文献中提取关键信息、生成深刻洞察并 
+ 构建结构化报告，大幅提升文献阅读和研究效率。
 
 ### 🎯 核心价值
 
-- **智能化分析**：利用大语言模型深度解析文献内容，提取方法学、创新点、研究意义。核心分析逻辑基于最新版 LangChain 组件，确保稳定性和兼容性。
+- **智能化分析**：利用大语言模型深度解析文献内容，提取方法学、创新点、研究意义。核心分析逻辑基于最
+最新版 LangChain 组件，确保稳定性和兼容性。
 - **结构化输出**：生成标准化的Markdown报告，包含完整的参考文献和相关文献数据
 - **多模态处理**：支持PDF文本提取、图像内容分析、元数据获取的完整流程
 - **高度可配置**：支持多种LLM模型、灵活的参数调整、个性化分析需求
@@ -30,61 +32,45 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
 ## ✨ 功能特点
 
 ### 📄 PDF内容处理
-- **智能PDF解析**：支持本地MinerU和在线API两种模式，高质量提取PDF文本内容
+
+- **智能PDF解析**：基于MinerU的`magic_pdf`库，高质量提取PDF文本内容
 - **图像内容分析**：支持PDF中图表、图片的智能识别和分析
 - **多格式输出**：Markdown、HTML、CSV等多种格式报告生成
-- **灵活部署**：可选择本地处理或云端API，满足不同场景需求
 
 ### 🔍 元数据获取
+
 - **多源数据整合**：集成PubMed、Semantic Scholar等权威学术数据库
 - **参考文献解析**：自动提取并丰富参考文献信息（作者、发表日期、期刊等）
 - **相关文献推荐**：基于主题相似度推荐相关研究文献
 
 ### 🤖 智能分析
+
 - **方法学分析**：深度解析研究方法、技术路线、数据来源
 - **创新点提取**：识别核心创新贡献、解决的关键问题
 - **问答生成**：自动生成针对文献内容的Q&A对，便于理解和记忆
 - **洞察总结**：提供研究意义、应用前景、局限性等全面分析
 
 ### 🎨 用户体验
+
 - **Web界面**：直观的Streamlit Web界面，支持文件上传、实时进度、报告预览
 - **命令行工具**：强大的CLI支持，适合批量处理和自动化工作流
 - **实时反馈**：详细的进度跟踪、日志输出、错误提示
 
 ## 🖼️ 应用截图 (Application Screenshots)
+
 <div align="center">
+
   <!-- 示例：Web界面主页 -->
-  <img src="docs/images/screenshot_main.png" alt="SLAIS Web Interface - Main Page" width="70%"/>
-  <p><em>图1：SLAIS Web应用主界面 (Placeholder: Main interface of the SLAIS Web App)</em></p>
+  <img src="docs/images/screenshot_main.png" alt="SLAIS Web Interface - Main Page" width="70%"/>  
+  <p><em>图1：SLAIS Web应用主界面 (Placeholder: Main interface of the SLAIS Web App)</em></p>     
+
 </div>
-
-
-
 
 ## 🚀 快速开始
 
-### 安装步骤
-
-1. **克隆项目**：
-   ```bash
-   git clone https://github.com/your-username/SLAIS.git
-   cd SLAIS
-   ```
-
-2. **创建环境变量配置**：
-   ```bash
-   # 方法1：复制模板文件
-   cp .env.example .env
-   
-   # 方法2：手动创建（参考下方配置说明）
-   touch .env
-   ```
-
-3. **编辑 .env 文件**，填写必要的API密钥和配置
-
 ### 环境要求
 
-- Python 3.10
+- Python 3.12
 - 8GB+ RAM（推荐16GB）
 - 网络连接（用于API调用）
 
@@ -92,7 +78,7 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/xtbggqy/SLAIS.git
+git clone https://github.com/ggqy20/SLAIS.git
 cd SLAIS
 
 # 2. 安装依赖
@@ -103,7 +89,7 @@ cp .env.example .env
 # 编辑.env文件，设置API密钥等配置
 
 # 4. 启动Web界面
-python -m streamlit run web/web_app.py
+python app.py
 ```
 
 [生成的分析报告示例](output/darwin/darwin_analysis.md)
@@ -120,7 +106,7 @@ python app.py --help
 
 ## 📦 安装指南
 
-### 使用pip安装（推荐）
+### 使用pip安装
 
 ```bash
 # 创建虚拟环境
@@ -131,15 +117,12 @@ source slais_env/bin/activate  # Windows: slais_env\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 使用conda/mamba安装
+### 使用conda/mamba安装（推荐）
 
 ```bash
 # 创建conda环境
-conda create -n slais python=3.10
+mamba env create -f environment.yaml
 conda activate slais
-
-# 安装依赖
-pip install -r requirements.txt
 ```
 
 ### 开发环境安装
@@ -156,64 +139,29 @@ pre-commit install
 
 ### 环境变量配置
 
-复制以下内容创建`.env`文件并配置必要参数：
-
-> **注意**：项目根目录包含 `.env.example` 文件模板，您可以复制该文件为 `.env` 并修改配置值。
+创建`.env`文件并配置以下必要参数：
 
 ```env
-# ====================
-# LLM API 配置（必需）
-# ====================
-OPENAI_API_KEY=your_openai_api_key_here
+# 大语言模型配置
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_API_MODEL=gpt-4
 OPENAI_API_BASE_URL=https://api.openai.com/v1
-OPENAI_API_MODEL=gpt-4o-mini
-OPENAI_TEMPERATURE=0.3
-
-# DashScope API 配置（可选，优先于 OpenAI）
-DASHSCOPE_API_KEY=your_dashscope_api_key_here
 
 # 图像分析模型配置
 IMAGE_LLM_API_KEY=your_image_llm_key
 IMAGE_LLM_API_MODEL=qwen-vl-plus
 
-# ====================
-# MinerU API 配置（必需）
-# ====================
-MINERU_API_KEY=your_mineru_api_key_here
-MINERU_API_BASE_URL=https://mineru.net/api/v4
-MINERU_MAX_WAIT_TIME=3600
-MINERU_CHECK_INTERVAL=10
-MINERU_MAX_RETRIES=3
-MINERU_RETRY_DELAY=5
+# 学术数据库配置
+NCBI_EMAIL=your@email.com
+SEMANTIC_SCHOLAR_API_KEY=your_s2_api_key
 
-# ====================
-# 学术数据库配置（推荐）
-# ====================
-NCBI_EMAIL=your_email@example.com
-SEMANTIC_SCHOLAR_API_KEY=your_s2_api_key_here
-
-# ====================
-# 文档配置（可选）
-# ====================
+# 文档配置
 ARTICLE_DOI=10.1234/example.doi
 DEFAULT_PDF_PATH=pdfs/example.pdf
-PDF_INPUT_DIR=pdfs
 
-# ====================
-# 系统配置（可选）
-# ====================
-LOG_LEVEL=INFO
-LOG_DIR=logs
-OUTPUT_BASE_DIR=output
-
-# ====================
-# 分析参数配置（可选）
-# ====================
+# 分析参数
 MAX_QUESTIONS_TO_GENERATE=30
 MAX_CONTENT_CHARS_FOR_LLM=15000
-RELATED_ARTICLES_MAX=30
-S2_RELATED_LIMIT=50
-S2_REFERENCES_LIMIT=100
 ```
 
 ### 重要配置参数
@@ -224,31 +172,6 @@ S2_REFERENCES_LIMIT=100
 | `MAX_QUESTIONS_TO_GENERATE` | 生成的问答对数量上限 | 30 |
 | `MAX_CONTENT_CHARS_FOR_LLM` | 传递给LLM的内容字符数上限 | 15000 |
 | `RELATED_ARTICLES_MAX` | 获取的相关文献数量上限 | 30 |
-| `MINERU_API_KEY` | MinerU API密钥（从mineru.net获取） | - |
-
-## 🔧 MinerU API 配置
-
-本项目使用MinerU在线API服务进行PDF解析，提供稳定高效的处理体验。
-
-### API配置步骤
-
-1. **获取API密钥**：
-   - 访问 [https://mineru.net](https://mineru.net)
-   - 注册账号并获取API密钥
-   - 每日享有2000页免费解析额度
-
-2. **配置环境变量**：
-   ```env
-   MINERU_API_KEY=your_mineru_api_key_here
-   ```
-
-3. **优势**：
-   - 无需安装复杂的本地模型
-   - 降低硬件要求
-   - 自动模型更新
-   - 稳定的服务质量
-
-详细配置请参考：[MinerU API 使用指南](docs/mineru_api_migration.md)
 
 ## 📚 使用文档
 
@@ -322,13 +245,12 @@ graph TD
     H --> I[输出文件]
 ```
 
-
-
 ## 🗺️ 路线图 (Roadmap)
 
 我们对SLAIS的未来发展充满期待，并计划在以下方面进行增强和扩展：
 
-- **[ ] 更广泛的文献数据库集成**：除了PubMed和Semantic Scholar，计划支持更多学术数据库（如ArXiv、Crossref等）。
+- **[ ] 更广泛的文献数据库集成**：除了PubMed和Semantic Scholar，计划支持更多学术数据库（如ArXiv、C
+Crossref等）。
 - **[ ] 交互式图表与可视化**：在Web报告中引入交互式图表，更直观地展示分析结果。
 - **[ ] 批量处理增强**：完善命令行工具的批量处理功能，支持更复杂的自动化工作流。
 - **[ ] 知识图谱构建**：探索从分析文献中自动构建小型知识图谱的可行性。
@@ -338,7 +260,6 @@ graph TD
 
 *我们欢迎社区成员就未来方向提出建议和功能请求。您可以通过项目的Issue跟踪器分享您的想法。*
 
-
 <!--
 ## 📊 性能与优化
 
@@ -346,11 +267,12 @@ graph TD
 
 - **处理速度**：单篇文献分析时间约3-5分钟
 - **内存使用**：峰值内存约2-4GB
-- **Token消耗**：每篇文献约5000-10000 tokens 
+- **Token消耗**：每篇文献约5000-10000 tokens
 
 ### 优化建议
 
-- **缓存机制**：已实现API响应缓存（针对元数据、参考文献、相关文章），并优化了缓存处理逻辑，有效减少重复API调用。
+- **缓存机制**：已实现API响应缓存（针对元数据、参考文献、相关文章），并优化了缓存处理逻辑，有效减 
+少重复API调用。
 - **并发处理**：适当调整并发参数，平衡速度与资源消耗。
 - **内容截断**：合理设置`MAX_CONTENT_CHARS_FOR_LLM`参数。-->
 
@@ -398,6 +320,7 @@ tests/
 ### Bug报告
 
 请使用GitHub Issues报告bug，包含以下信息：
+
 - 操作系统和Python版本
 - 完整的错误消息和堆栈跟踪
 - 重现步骤
@@ -406,6 +329,7 @@ tests/
 ### 功能请求
 
 欢迎提出新功能建议，请在Issue中说明：
+
 - 功能描述和使用场景
 - 预期的API设计
 - 可能的实现方案
@@ -413,7 +337,6 @@ tests/
 ## 📄 许可证
 
 本项目采用MIT许可证。详细信息请查看[LICENSE](LICENSE)文件。
-
 
 ## 🙏 致谢
 
