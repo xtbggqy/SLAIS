@@ -176,7 +176,7 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
     # 3.1 PDF解析
     update_progress(10, "步骤 1/6：解析PDF内容...")
     start_time_pdf_parsing = datetime.datetime.now() # 初始化 start_time_pdf_parsing
-    markdown_content = await pdf_parser.extract_content(pdf_path)
+    markdown_content = pdf_parser.extract_content(pdf_path)
     
     if not markdown_content:
         logger.error("PDF内容提取失败，流程中止。")
@@ -202,7 +202,7 @@ async def process_article_pipeline(pdf_path: str, article_doi: str, ncbi_email: 
         image_paths = [str((image_dir / p.name).relative_to(markdown_dir)) for p in image_dir.iterdir() if p.is_file() and p.suffix.lower() in [".png", ".jpg", ".jpeg", ".bmp", ".gif"]]
     elif hasattr(pdf_parser, "extract_images") and callable(getattr(pdf_parser, "extract_images", None)):
         try:
-            extracted = await pdf_parser.extract_images(pdf_path, output_dir=image_dir)
+            extracted = pdf_parser.extract_images(pdf_path, output_dir=str(image_dir))
             if extracted and isinstance(extracted, list):
                 # 以 markdown_dir 为基准，获得 images 下所有图片的相对路径
                 image_paths = [str(Path(p).relative_to(markdown_dir)) for p in extracted]

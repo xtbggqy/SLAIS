@@ -30,9 +30,10 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
 ## ✨ 功能特点
 
 ### 📄 PDF内容处理
-- **智能PDF解析**：基于MinerU的`magic_pdf`库，高质量提取PDF文本内容
+- **智能PDF解析**：支持本地MinerU和在线API两种模式，高质量提取PDF文本内容
 - **图像内容分析**：支持PDF中图表、图片的智能识别和分析
 - **多格式输出**：Markdown、HTML、CSV等多种格式报告生成
+- **灵活部署**：可选择本地处理或云端API，满足不同场景需求
 
 ### 🔍 元数据获取
 - **多源数据整合**：集成PubMed、Semantic Scholar等权威学术数据库
@@ -61,6 +62,25 @@ SLAIS (Smart Literature Analysis and Insight System) 是一个基于人工智能
 
 
 ## 🚀 快速开始
+
+### 安装步骤
+
+1. **克隆项目**：
+   ```bash
+   git clone https://github.com/your-username/SLAIS.git
+   cd SLAIS
+   ```
+
+2. **创建环境变量配置**：
+   ```bash
+   # 方法1：复制模板文件
+   cp .env.example .env
+   
+   # 方法2：手动创建（参考下方配置说明）
+   touch .env
+   ```
+
+3. **编辑 .env 文件**，填写必要的API密钥和配置
 
 ### 环境要求
 
@@ -136,29 +156,64 @@ pre-commit install
 
 ### 环境变量配置
 
-创建`.env`文件并配置以下必要参数：
+复制以下内容创建`.env`文件并配置必要参数：
+
+> **注意**：项目根目录包含 `.env.example` 文件模板，您可以复制该文件为 `.env` 并修改配置值。
 
 ```env
-# 大语言模型配置
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_API_MODEL=gpt-4
+# ====================
+# LLM API 配置（必需）
+# ====================
+OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_API_BASE_URL=https://api.openai.com/v1
+OPENAI_API_MODEL=gpt-4o-mini
+OPENAI_TEMPERATURE=0.3
+
+# DashScope API 配置（可选，优先于 OpenAI）
+DASHSCOPE_API_KEY=your_dashscope_api_key_here
 
 # 图像分析模型配置
 IMAGE_LLM_API_KEY=your_image_llm_key
 IMAGE_LLM_API_MODEL=qwen-vl-plus
 
-# 学术数据库配置
-NCBI_EMAIL=your@email.com
-SEMANTIC_SCHOLAR_API_KEY=your_s2_api_key
+# ====================
+# MinerU API 配置（必需）
+# ====================
+MINERU_API_KEY=your_mineru_api_key_here
+MINERU_API_BASE_URL=https://mineru.net/api/v4
+MINERU_MAX_WAIT_TIME=3600
+MINERU_CHECK_INTERVAL=10
+MINERU_MAX_RETRIES=3
+MINERU_RETRY_DELAY=5
 
-# 文档配置
+# ====================
+# 学术数据库配置（推荐）
+# ====================
+NCBI_EMAIL=your_email@example.com
+SEMANTIC_SCHOLAR_API_KEY=your_s2_api_key_here
+
+# ====================
+# 文档配置（可选）
+# ====================
 ARTICLE_DOI=10.1234/example.doi
 DEFAULT_PDF_PATH=pdfs/example.pdf
+PDF_INPUT_DIR=pdfs
 
-# 分析参数
+# ====================
+# 系统配置（可选）
+# ====================
+LOG_LEVEL=INFO
+LOG_DIR=logs
+OUTPUT_BASE_DIR=output
+
+# ====================
+# 分析参数配置（可选）
+# ====================
 MAX_QUESTIONS_TO_GENERATE=30
 MAX_CONTENT_CHARS_FOR_LLM=15000
+RELATED_ARTICLES_MAX=30
+S2_RELATED_LIMIT=50
+S2_REFERENCES_LIMIT=100
 ```
 
 ### 重要配置参数
@@ -169,6 +224,31 @@ MAX_CONTENT_CHARS_FOR_LLM=15000
 | `MAX_QUESTIONS_TO_GENERATE` | 生成的问答对数量上限 | 30 |
 | `MAX_CONTENT_CHARS_FOR_LLM` | 传递给LLM的内容字符数上限 | 15000 |
 | `RELATED_ARTICLES_MAX` | 获取的相关文献数量上限 | 30 |
+| `MINERU_API_KEY` | MinerU API密钥（从mineru.net获取） | - |
+
+## 🔧 MinerU API 配置
+
+本项目使用MinerU在线API服务进行PDF解析，提供稳定高效的处理体验。
+
+### API配置步骤
+
+1. **获取API密钥**：
+   - 访问 [https://mineru.net](https://mineru.net)
+   - 注册账号并获取API密钥
+   - 每日享有2000页免费解析额度
+
+2. **配置环境变量**：
+   ```env
+   MINERU_API_KEY=your_mineru_api_key_here
+   ```
+
+3. **优势**：
+   - 无需安装复杂的本地模型
+   - 降低硬件要求
+   - 自动模型更新
+   - 稳定的服务质量
+
+详细配置请参考：[MinerU API 使用指南](docs/mineru_api_migration.md)
 
 ## 📚 使用文档
 

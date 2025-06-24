@@ -1,10 +1,8 @@
-PROFILE
-.env
 __pycache__# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
+*/__pycache__/
 # C extensions
 *.so
 
@@ -92,6 +90,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Keep .env.example tracked
+!.env.example
+
 # Spyder project settings
 .spyderproject
 .spyderworkspace
@@ -109,6 +110,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
 
 # profiling data
 PROFILE/

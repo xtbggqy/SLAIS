@@ -41,7 +41,7 @@
 ### 1. 测试体系建设 (优先级：高)
 - [ ] 搭建完整的 `tests/` 目录结构，区分单元测试与集成测试
 - [ ] 针对核心模块编写基础单元测试：
-  - [ ] `slais/pdf_utils.py` - PDF处理功能测试
+  - [ ] `slais/pdf_utils_api.py` - PDF API处理功能测试
   - [ ] `agents/llm_analysis_agent.py` - LLM分析逻辑测试
   - [ ] `agents/metadata_fetching_agent.py` - 元数据获取测试
   - [ ] `web/web_app.py` - Web界面功能测试

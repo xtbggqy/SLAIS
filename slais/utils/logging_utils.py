@@ -49,7 +49,6 @@ class LogFilter(logging.Filter):
             r'If your task',
             r'DocAnalysis init done',
             # PDF处理相关进度信息
-            r'magic_pdf',
             r'Layout Predict',
             r'MFD Predict',
             r'MFR Predict', 
@@ -132,7 +131,7 @@ def setup_logging():
     logger.addHandler(console_handler)
 
     # 配置其他库的日志级别 (减少外部库日志输出)
-    for lib_logger_name in ['magic_pdf', 'transformers', 'PIL', 'httpx', 'matplotlib', 'huggingface_hub', 'anyio', 'httpcore']:
+    for lib_logger_name in ['transformers', 'PIL', 'httpx', 'matplotlib', 'huggingface_hub', 'anyio', 'httpcore']:
         lib_logger = logging.getLogger(lib_logger_name)
         lib_logger.setLevel(logging.WARNING) # 将第三方库日志级别设为WARNING或更高
 

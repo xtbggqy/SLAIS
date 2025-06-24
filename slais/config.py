@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     # API Keys
     OPENAI_API_KEY: str = Field("", description="API key for OpenAI or compatible API")
     DASHSCOPE_API_KEY: str = Field("", description="API key for DashScope (优先于OPENAI_API_KEY)")
+    MINERU_API_KEY: str = Field("", description="API key for MinerU API service")
 
     # Model Configuration
     OPENAI_API_MODEL: str = Field("gpt-4", description="Model name for OpenAI or compatible API")
@@ -97,6 +98,13 @@ class Settings(BaseSettings):
     # PDF Path Configuration
     PDF_INPUT_DIR: str = Field("pdfs", description="Directory for input PDF files")
     DEFAULT_PDF_PATH: str = Field("pdfs/example.pdf", description="Default path for PDF file to process")
+    
+    # MinerU API Configuration
+    MINERU_API_BASE_URL: str = Field("https://mineru.net/api/v4", description="Base URL for MinerU API")
+    MINERU_MAX_WAIT_TIME: int = Field(3600, description="Maximum wait time for MinerU API tasks (seconds)")
+    MINERU_CHECK_INTERVAL: int = Field(10, description="Check interval for MinerU API task status (seconds)")
+    MINERU_MAX_RETRIES: int = Field(3, description="Maximum number of upload retries for MinerU API")
+    MINERU_RETRY_DELAY: int = Field(5, description="Base delay between retries (seconds, will be multiplied by attempt number)")
 
     # Article DOI Configuration
     ARTICLE_DOI: Optional[str] = Field(None, description="DOI of the article to process")
@@ -189,7 +197,6 @@ class Settings(BaseSettings):
     def LOG_FILE(self) -> str:
         return os.path.join(self.LOG_DIR, f"slais_{CURRENT_TIMESTAMP}.log")
 
-    # Ensure directories exist after settings are loaded
     def model_post_init(self, __context: Any) -> None:
         """Ensure directories exist after settings are loaded."""
         directories = [
@@ -211,7 +218,16 @@ if not is_help_mode:
     print(f"DEBUG: 从环境变量加载的DOI: {settings.ARTICLE_DOI}")
     print(f"DEBUG: 最大问题生成数量: {settings.MAX_QUESTIONS_TO_GENERATE}")
 
-# Update module-level variables to use the settings instance
+# 导出常用变量供直接导入
+MINERU_API_KEY = settings.MINERU_API_KEY
+MINERU_API_BASE_URL = settings.MINERU_API_BASE_URL
+MINERU_MAX_WAIT_TIME = settings.MINERU_MAX_WAIT_TIME
+MINERU_CHECK_INTERVAL = settings.MINERU_CHECK_INTERVAL
+MINERU_MAX_RETRIES = settings.MINERU_MAX_RETRIES
+MINERU_RETRY_DELAY = settings.MINERU_RETRY_DELAY
+
+# 其他常用配置
+OUTPUT_BASE_DIR = settings.OUTPUT_BASE_DIR
 PUBMED_API_BASE_URL = settings.PUBMED_API_BASE_URL
 DEFAULT_REQUEST_TIMEOUT = settings.DEFAULT_REQUEST_TIMEOUT
 OPENAI_API_KEY = settings.OPENAI_API_KEY
@@ -253,7 +269,6 @@ S2_REFERENCES_LIMIT = settings.S2_REFERENCES_LIMIT
 PDF_INPUT_DIR = settings.PDF_INPUT_DIR
 DEFAULT_PDF_PATH = settings.DEFAULT_PDF_PATH
 ARTICLE_DOI = settings.ARTICLE_DOI
-OUTPUT_BASE_DIR = settings.OUTPUT_BASE_DIR
 PDF_IMAGES_SUBDIR = settings.PDF_IMAGES_SUBDIR
 CACHE_DIR = settings.CACHE_DIR
 CACHE_EXPIRY_DAYS = settings.CACHE_EXPIRY_DAYS

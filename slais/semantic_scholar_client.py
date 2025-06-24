@@ -317,12 +317,24 @@ class SemanticScholarClient:
             return await self.get_references_by_paper_id(paper_id, limit)
             
         if not response_data or not isinstance(response_data, dict):
+            logger.warning(f"[S2] PaperID {paper_id}: API返回数据格式异常或为空")
             return []
             
         references_dois = []
         s2_references_data = response_data.get("data", [])
         
+        # 添加None值检查
+        if s2_references_data is None:
+            logger.warning(f"[S2] PaperID {paper_id}: 参考文献数据为None")
+            return []
+        
+        if not isinstance(s2_references_data, list):
+            logger.warning(f"[S2] PaperID {paper_id}: 参考文献数据不是列表格式: {type(s2_references_data)}")
+            return []
+        
         for ref_item in s2_references_data:
+            if not ref_item or not isinstance(ref_item, dict):
+                continue
             cited_paper = ref_item.get('citedPaper')
             if cited_paper and isinstance(cited_paper.get('externalIds'), dict):
                 doi = cited_paper['externalIds'].get('DOI')
